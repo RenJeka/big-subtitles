@@ -105,9 +105,11 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     } else if (mode === MODE_SCROLL) {
       applyMotionFont();
     } else {
-      // tele / marquee — показати накопичений буфер, рух з початку.
+      // tele / marquee — показати накопичений буфер. Стартуємо з pos=0: контент видно
+      // одразу (зверху/зліва), а рух починається, лише коли він переростає екран —
+      // як живі субтитри (без довгого «порожнього» розгону й відчуття «застрягло»).
       liveEl.textContent = buffer;
-      pos = (mode === MODE_MARQUEE) ? wrapEl.clientWidth : wrapEl.clientHeight;
+      pos = 0;
       applyMotionFont();
       startLoop();
     }

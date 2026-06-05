@@ -28,7 +28,7 @@ export function decode(raw) {
 // але presence-підписка діє завжди — обидві ролі стежать за присутністю партнера.
 // Зелене «з'єднано» = брокер + партнер на зв'язку; інакше «очікування пристрою…».
 // Повертає { client, topic } або null, якщо бібліотека недоступна.
-export function connect(room, role, onMessage, statusEl) {
+export function connect(room, role, onMessage, statusEl, onPeerConnectionChange) {
   if (typeof mqtt === "undefined") {
     setStatus(statusEl, "err", TEXT_STATUS_NO_MQTT);
     return null;
@@ -54,8 +54,13 @@ export function connect(room, role, onMessage, statusEl) {
   let peerOnline = false;
   function refreshStatus() {
     if (brokerConnected) {
-      if (peerOnline) setStatus(statusEl, "ok", TEXT_STATUS_CONNECTED);
-      else setStatus(statusEl, "", TEXT_STATUS_WAITING);
+      if (peerOnline) {
+        setStatus(statusEl, "ok", TEXT_STATUS_CONNECTED);
+        if (onPeerConnectionChange) onPeerConnectionChange(true);
+      } else {
+        setStatus(statusEl, "", TEXT_STATUS_WAITING);
+        if (onPeerConnectionChange) onPeerConnectionChange(false);
+      }
     }
   }
 

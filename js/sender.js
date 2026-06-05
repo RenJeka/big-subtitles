@@ -246,13 +246,10 @@ export function init() {
   const input = $("input");
   let timer = null;
 
-  function isMotionMode() {
-    return displayMode === MODE_TELE || displayMode === MODE_MARQUEE;
-  }
-
+  // Live надсилаємо завжди. Плавність суфлера/бігучки гарантує Display: у режимах руху
+  // він ІГНОРУЄ live й оновлює потік лише по commit (кнопка/Enter). Тож блокувати live
+  // на боці Sender не потрібно — інакше при розсинхроні режиму текст міг зовсім не йти.
   function scheduleLive() {
-    // Суфлер/бігучка: текст надсилається лише по кнопці/Enter — без live під час набору.
-    if (isMotionMode()) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => publish(MSG_TYPE_LIVE, input.value, true), DEBOUNCE_MS);
   }

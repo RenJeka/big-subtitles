@@ -4,7 +4,7 @@ import {
   HISTORY_LIMIT, ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
   TEXT_PLACEHOLDER, ROLE_DISPLAY, MODE_TELE, MODE_MARQUEE
 } from "./config.js";
-import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal, bindOutsideClose } from "./utils.js";
+import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal, closeQrModal, bindOutsideClose } from "./utils.js";
 import { connect, decode } from "./mqtt-client.js";
 import { makeKeyB64, initKey, decrypt } from "./crypto.js";
 import { createLiveView } from "./live-view.js";
@@ -119,10 +119,13 @@ export function init() {
         if (!isMotionMode()) setLive(msg.text || "");
       }
     });
-  }, $("status-display"));
+  }, $("status-display"), (isConnected) => {
+    if (isConnected) closeQrModal();
+  });
 
   // ---- QR (модальний) ----
   initQrModal(room, key);
+  openQrModal();
 
   // ---- Налаштування (тема/розмір/режим/швидкість/банер/QR) ----
   settings.init({
