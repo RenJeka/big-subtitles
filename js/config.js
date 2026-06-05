@@ -18,7 +18,8 @@ export const KEEPALIVE_SEC = 30;
 // Типи повідомлень протоколу
 export const MSG_TYPE_LIVE = "live";
 export const MSG_TYPE_COMMIT = "commit";
-// Налаштування: Sender надсилає Display розмір + тему (retain:true)
+// Налаштування: Sender надсилає Display розмір + тему + режим показу + швидкість
+// (payload: {type, size, displayTheme, mode, speed}, retain:true)
 export const MSG_TYPE_SETTINGS = "settings";
 
 // ===================== Присутність (presence) =====================
@@ -36,6 +37,8 @@ export const LS_SIZE = "velyki.size";            // розмір тексту Di
 export const LS_WAKE = "velyki.wakeDismissed";
 export const LS_SENDER_THEME = "velyki.senderTheme"; // власна тема Sender
 export const LS_PUSH_THEME = "velyki.pushTheme";     // тема Display, яку Sender хоче надіслати
+export const LS_MODE = "velyki.mode";    // режим показу live-тексту Display
+export const LS_SPEED = "velyki.speed";  // швидкість авто-руху (суфлер/бігуча строка)
 
 // ===================== Ролі / екрани =====================
 
@@ -58,6 +61,30 @@ export const FIT_HEIGHT_RATIO = 0.9;
 // Максимальна кількість ітерацій бінарного пошуку
 export const FIT_MAX_STEPS = 18;
 
+// ===================== Режими показу live-тексту =====================
+
+// fit — автомасштаб (поточний); scroll — фіксований розмір + ручний скрол;
+// tele — суфлер (вертикальна авто-прокрутка); marquee — бігуча строка (горизонтальна).
+export const MODE_FIT = "fit";
+export const MODE_SCROLL = "scroll";
+export const MODE_TELE = "tele";
+export const MODE_MARQUEE = "marquee";
+
+// Швидкість авто-руху (рівні; ➖/➕ крок = 1): від «дуже повільно» до «середньо».
+export const SPEED_MIN = 1;
+export const SPEED_MAX = 6;
+export const DEFAULT_SPEED = 2;
+
+// Маппінг рівня швидкості → px/сек: pxPerSec = base + (speed-1)*step.
+export const TELE_PX_BASE = 8;      // рівень 1 ≈ 8 px/с («дуже повільно»)
+export const TELE_PX_STEP = 12;     // рівень 6 ≈ 68 px/с («середньо»)
+export const MARQUEE_PX_BASE = 30;  // бігучка трохи жвавіша за суфлер
+export const MARQUEE_PX_STEP = 24;
+
+// Фіксований шрифт у scroll/tele/marquee:
+// fontPx = max(FIT_MIN_FONT_PX, round(size * SCROLL_FONT_RATIO * min(wrapW, wrapH)))
+export const SCROLL_FONT_RATIO = 0.18;
+
 // ===================== QR-код =====================
 
 export const QR_SIZE = 220;  // ширина й висота QR-коду (px)
@@ -78,11 +105,20 @@ export const FOCUS_DELAY_MS = 300;
 
 export const DEFAULT_THEME = "dark";
 export const DEFAULT_SIZE = "1";
+export const DEFAULT_MODE = MODE_SCROLL; // типовий режим — прокрутка з фіксованим розміром
 
 // ===================== UI-тексти =====================
 
 export const TEXT_PLACEHOLDER = "Очікую текст…";
 export const TEXT_QR_UNAVAILABLE = "QR недоступний — відкрийте посилання нижче вручну.";
+
+// Підписи режимів показу та швидкості (для панелей налаштувань)
+export const TEXT_MODE_LABEL = "Режим показу";
+export const TEXT_MODE_FIT = "Авто-розмір";
+export const TEXT_MODE_SCROLL = "Прокрутка";
+export const TEXT_MODE_TELE = "Суфлер";
+export const TEXT_MODE_MARQUEE = "Бігуча строка";
+export const TEXT_SPEED = "Швидкість";
 
 // Тексти індикатора з'єднання
 export const TEXT_STATUS_CONNECTED = "з'єднано";          // обидва пристрої на зв'язку (зелено)
