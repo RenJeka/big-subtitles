@@ -20,6 +20,8 @@ export function init() {
   }
 
   const historyEl = $("history");
+  const historyPanel = $("history-panel");
+  const historyEmpty = $("history-empty");
   const liveEl = $("live");
   const liveWrap = $("live-wrap");
 
@@ -36,6 +38,15 @@ export function init() {
     fitLive();
   }
 
+  // Оновлює видимість заглушки «Поки що порожньо».
+  function updateEmptyHint() {
+    if (historyEl.children.length > 0) {
+      historyEmpty.classList.add("hidden");
+    } else {
+      historyEmpty.classList.remove("hidden");
+    }
+  }
+
   // Додає один рядок в історію (DOM — джерело істини), анімуючи лише новий.
   function appendLine(text) {
     text = (text || "").replace(/\n+$/, "");
@@ -49,8 +60,20 @@ export function init() {
       historyEl.removeChild(historyEl.firstChild);
     }
     historyEl.scrollTop = historyEl.scrollHeight;
-    fitLive();
+    updateEmptyHint();
   }
+
+  // Вибір елемента з історії → показати на екрані.
+  historyEl.addEventListener("click", function (e) {
+    var line = e.target;
+    while (line && line !== historyEl) {
+      if (line.classList && line.classList.contains("line")) break;
+      line = line.parentElement;
+    }
+    if (!line || line === historyEl) return;
+    setLive(line.textContent);
+    historyPanel.classList.remove("open");
+  });
 
   connect(room, ROLE_DISPLAY, (raw) => {
     const msg = decode(raw);
@@ -76,4 +99,6 @@ export function init() {
   window.addEventListener("orientationchange", () => setTimeout(fitLive, ORIENTATION_DELAY_MS));
 
   fitLive();
+  updateEmptyHint();
 }
+

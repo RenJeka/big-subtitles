@@ -39,7 +39,19 @@ export function init(hooks = {}) {
   applyTheme(theme);
   $("size-range").value = currentSize;
 
-  $("gear").addEventListener("click", () => $("settings").classList.toggle("open"));
+  $("gear").addEventListener("click", function () {
+    var hp = $("history-panel");
+    if (hp) hp.classList.remove("open");
+    $("settings").classList.toggle("open");
+  });
+
+  var histBtn = $("history-btn");
+  if (histBtn) {
+    histBtn.addEventListener("click", function () {
+      $("settings").classList.remove("open");
+      $("history-panel").classList.toggle("open");
+    });
+  }
 
   $("size-range").addEventListener("input", () => {
     currentSize = parseFloat($("size-range").value) || 1;

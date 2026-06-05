@@ -69,15 +69,20 @@ html, body {
 .status.is-connected .dot { background: var(--ok); }
 .status.is-error .dot { background: var(--err); }
 
-/* ---------- Спільний: кнопка шестірні та панель налаштувань ---------- */
-.gear-btn {
+/* ---------- Спільний: тулбар кнопок та панель налаштувань ---------- */
+.toolbar {
   position: fixed; top: env(safe-area-inset-top, 8px); right: 8px;
+  display: flex; gap: 8px;
+  z-index: 60;
+}
+.toolbar-btn {
   width: 38px; height: 38px; border-radius: 50%;
   background: rgba(127,127,127,0.18); color: var(--fg);
   border: none; font-size: 20px; line-height: 38px; text-align: center;
-  opacity: 0.35; cursor: pointer; z-index: 60;
+  opacity: 0.35; cursor: pointer;
 }
-.gear-btn:active { opacity: 1; }
+.toolbar-btn:active { opacity: 1; }
+
 .settings-panel {
   position: fixed; top: 52px; right: 8px;
   background: var(--panel); color: var(--fg);
@@ -104,30 +109,57 @@ html, body {
 /* ---------- Display ---------- */
 #screen-display { flex-direction: column; position: relative; }
 
-/* Display використовує загальні .gear-btn та .settings-panel */
-#gear { /* успадковує .gear-btn */ }
-#settings { /* успадковує .settings-panel */ }
-
-#history {
-  flex: 0 1 auto;
-  max-height: 38%;
-  overflow-y: auto;
-  padding: 10px 24px 0;
-  -webkit-overflow-scrolling: touch;
+/* ---------- Панель історії ---------- */
+.history-panel {
+  position: fixed; top: 52px; right: 8px;
+  background: var(--panel); color: var(--fg);
+  border-radius: 14px; padding: 0; z-index: 60;
+  display: none; width: 320px; max-width: calc(100vw - 16px);
+  max-height: 70vh; overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  animation: modal-in 0.2s ease;
 }
-#history .line {
-  font-size: clamp(20px, 4vh, 48px);
-  line-height: 1.2;
-  color: var(--history);
+.history-panel.open { display: flex; flex-direction: column; }
+
+.history-panel-header {
+  padding: 14px 16px 10px;
+  font-size: 13px; font-weight: 700; color: var(--muted);
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid rgba(127,127,127,0.15);
+  flex-shrink: 0;
+}
+
+.history-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px 8px;
+}
+.history-list .line {
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--fg);
   white-space: pre-wrap;
   word-break: break-word;
-  margin: 6px 0;
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  padding: 10px 12px;
+  margin: 2px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.18s ease, transform 0.18s ease;
 }
+.history-list .line:hover { background: rgba(127,127,127,0.15); }
+.history-list .line:active { background: rgba(127,127,127,0.25); }
 /* Початковий стан щойно доданого рядка — анімується до видимого. */
-#history .line.line-enter {
+.history-list .line.line-enter {
   opacity: 0;
   transform: translateY(10px);
+}
+
+.history-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
 }
 #live-wrap {
   flex: 1 1 auto;
@@ -172,13 +204,7 @@ html, body {
 
 /* ---------- Sender ---------- */
 #screen-sender { flex-direction: column; padding: 0; }
-#sender-head {
-  padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
-  display: flex; justify-content: flex-end;
-}
-/* sender-gear і sender-settings успадковують загальні стилі */
-#sender-gear { /* .gear-btn */ }
-#sender-settings { /* .settings-panel */ }
+/* sender-gear і sender-settings успадковують загальні .toolbar / .toolbar-btn / .settings-panel */
 
 #input {
   flex: 1 1 auto;
@@ -238,8 +264,9 @@ html, body {
 
 /* Поважати системне налаштування зменшеного руху. */
 @media (prefers-reduced-motion: reduce) {
-  #history .line { transition: none; }
-  #history .line.line-enter { opacity: 1; transform: none; }
+  .history-list .line { transition: none; }
+  .history-list .line.line-enter { opacity: 1; transform: none; }
+  .history-panel { animation: none; }
   .settings-panel button { transition: none; }
   #qr-modal-box { animation: none; }
 }

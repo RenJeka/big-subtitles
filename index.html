@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Andika:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=2">
 </head>
 <body>
 
@@ -25,7 +25,10 @@
   <!-- Display -->
   <section id="screen-display" class="screen">
     <div class="status" id="status-display"><span class="dot"></span><span class="txt">з'єднання…</span></div>
-    <button id="gear" class="gear-btn" title="Налаштування">⚙</button>
+    <div class="toolbar" id="display-toolbar">
+      <button id="history-btn" class="toolbar-btn" title="Історія">📜</button>
+      <button id="gear" class="toolbar-btn" title="Налаштування">⚙</button>
+    </div>
     <div id="settings" class="settings-panel">
       <label>Розмір тексту</label>
       <input type="range" id="size-range" min="0.35" max="1" step="0.05" value="1">
@@ -40,7 +43,11 @@
       </div>
     </div>
 
-    <div id="history"></div>
+    <div id="history-panel" class="history-panel">
+      <div class="history-panel-header">Історія</div>
+      <div id="history" class="history-list"></div>
+      <div id="history-empty" class="history-empty">Поки що порожньо</div>
+    </div>
     <div id="live-wrap"><div id="live" class="placeholder">Очікую текст…</div></div>
 
     <div id="wake-hint">
@@ -52,8 +59,8 @@
   <!-- Sender -->
   <section id="screen-sender" class="screen">
     <div class="status" id="status-sender"><span class="dot"></span><span class="txt">з'єднання…</span></div>
-    <div id="sender-head">
-      <button id="sender-gear" class="gear-btn" title="Налаштування">⚙</button>
+    <div class="toolbar" id="sender-toolbar">
+      <button id="sender-gear" class="toolbar-btn" title="Налаштування">⚙</button>
     </div>
     <div id="sender-settings" class="settings-panel">
       <label>Розмір тексту на дисплеї</label>
