@@ -1,11 +1,11 @@
 // Контролер показу великого live-тексту (#live) за обраним режимом.
-// Інкапсулює весь рендер: автомасштаб (fit), прокрутка, суфлер, бігуча строка.
-// fit() лишається у fit-text.js і викликається звідси для режиму "fit".
+// fit — автомасштаб; scroll — фіксований розмір + ручний скрол;
+// tele/marquee — авто-рух ЧИСТОЮ CSS-анімацією (без JS у циклі).
 //
-// Суфлер/бігучка працюють у накопичувальному режимі: текст додається через
-// appendLine() БЕЗ перезапуску анімації (без скидання позиції) — звідси плавність.
-// Анімація не циклічна, а клемпиться в кінці; коли додається новий рядок,
-// з'являється куди прокручувати далі — без ривків.
+// Стратегія руху: жодного requestAnimationFrame. Рух виконує CSS @keyframes
+// (linear infinite) на композиторі GPU. JS лише ОДИН раз на зміну контенту/розміру/
+// швидкості вимірює геометрію й задає CSS-змінні --vs-from/--vs-to/--vs-dur. Під час
+// самого руху браузер нічого не перераховує — звідси максимальна плавність.
 import {
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   TELE_PX_BASE, TELE_PX_STEP, MARQUEE_PX_BASE, MARQUEE_PX_STEP,
@@ -15,12 +15,6 @@ import {
 import { fit } from "./fit-text.js";
 
 const ALL_MODE_CLASSES = ["mode-fit", "mode-scroll", "mode-tele", "mode-marquee"];
-
-// Чи просить система зменшити рух (вимикаємо авто-прокрутку/бігучку).
-function prefersReducedMotion() {
-  return typeof matchMedia === "function" &&
-    matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
 
 // Рівень швидкості → px/сек для відповідного режиму.
 function pxPerSec(mode, speed) {
@@ -39,81 +33,54 @@ function scrollFontPx(wrapEl, size) {
 export function createLiveView(liveEl, wrapEl, getSize) {
   let mode = DEFAULT_MODE;
   let speed = DEFAULT_SPEED;
-  let rafId = null;
-  let pos = 0;       // поточне зміщення (px) для tele/marquee
-  let lastTs = 0;
   let buffer = "";   // накопичений текст для tele/marquee
-  let minPos = 0;    // кешована нижня межа зсуву; оновлюється ЛИШЕ при зміні контенту/розміру
 
   function isMotion() { return mode === MODE_TELE || mode === MODE_MARQUEE; }
-
-  function stopAnim() {
-    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    lastTs = 0;
-  }
-
-  // Скинути всі inline-стилі, які виставляли різні режими.
-  function resetStyles() {
-    liveEl.style.fontSize = "";
-    liveEl.style.transform = "";
-    wrapEl.scrollTop = 0;
-  }
 
   function applyMotionFont() {
     liveEl.style.fontSize = scrollFontPx(wrapEl, getSize()) + "px";
   }
 
-  // Виміряти межу зсуву. ЄДИНЕ місце, де читаємо layout (scrollHeight/scrollWidth) —
-  // викликається лише при зміні контенту/шрифту/розміру, НЕ щокадрово.
-  function measure() {
-    if (mode === MODE_MARQUEE) {
-      minPos = Math.min(0, wrapEl.clientWidth - liveEl.scrollWidth);
-    } else if (mode === MODE_TELE) {
-      minPos = Math.min(0, wrapEl.clientHeight - liveEl.scrollHeight);
-    } else {
-      minPos = 0;
-    }
-  }
-
-  // Запис лише transform (translate3d → композитний шар GPU, без repaint/reflow).
-  function writeTransform() {
-    liveEl.style.transform = (mode === MODE_MARQUEE)
-      ? "translate3d(" + pos + "px,0,0)"
-      : "translate3d(0," + pos + "px,0)";
-  }
-
-  // Один крок анімації: рух уверх (tele) / уліво (marquee) з клемпом у кінці.
-  // У циклі НЕ читаємо layout — лише пишемо transform. Дійшовши до кінця (minPos),
-  // зупиняємось до появи нового тексту; appendLine() перезапустить рух.
-  function tick(ts) {
-    if (!lastTs) lastTs = ts;
-    const dt = (ts - lastTs) / 1000;
-    lastTs = ts;
-    pos -= pxPerSec(mode, speed) * dt;
-    if (pos <= minPos) {
-      pos = minPos;
-      writeTransform();
-      rafId = null; lastTs = 0; // догнали кінець — спимо, нуль навантаження
-      return;
-    }
-    writeTransform();
-    rafId = requestAnimationFrame(tick);
-  }
-
-  function startLoop() {
-    if (rafId) return;
-    if (prefersReducedMotion()) {
-      // Поважаємо reduced-motion: статичний показ без авто-руху (скрол через CSS).
+  // Налаштувати CSS-анімацію руху під поточний контент/швидкість.
+  // ЄДИНЕ місце, де читаємо layout (scrollHeight/scrollWidth) — і лише на ЗМІНУ
+  // контенту/розміру, а не щокадрово. Далі рух веде CSS сам.
+  function setMotionAnim() {
+    if (!buffer) {                      // нема тексту — нема руху
+      liveEl.style.animation = "none";
       liveEl.style.transform = "";
       return;
     }
-    lastTs = 0;
-    rafId = requestAnimationFrame(tick);
+    let from, to, distance;
+    if (mode === MODE_MARQUEE) {
+      const sw = liveEl.scrollWidth;
+      from = wrapEl.clientWidth; to = -sw; distance = wrapEl.clientWidth + sw;
+    } else {
+      const sh = liveEl.scrollHeight;
+      from = wrapEl.clientHeight; to = -sh; distance = wrapEl.clientHeight + sh;
+    }
+    const dur = Math.max(1, distance / pxPerSec(mode, speed)); // сек, сталий px/с
+    liveEl.style.setProperty("--vs-from", from + "px");
+    liveEl.style.setProperty("--vs-to", to + "px");
+    liveEl.style.setProperty("--vs-dur", dur + "s");
+    // Перезапустити анімацію, щоб нові значення застосувались. Один reflow на зміну
+    // контенту (не на кадр): inline-"none" → reflow → "" (повертає клас із keyframes).
+    liveEl.style.animation = "none";
+    void liveEl.offsetWidth;
+    liveEl.style.animation = "";
   }
 
-  // Повний (пере)рендер поточного режиму. Buffer НЕ чистить — лише відображає його.
+  // Скинути всі inline-стилі/змінні, які виставляли різні режими.
+  function resetStyles() {
+    liveEl.style.fontSize = "";
+    liveEl.style.transform = "";
+    liveEl.style.animation = "";
+    liveEl.style.removeProperty("--vs-from");
+    liveEl.style.removeProperty("--vs-to");
+    liveEl.style.removeProperty("--vs-dur");
+    wrapEl.scrollTop = 0;
+  }
+
   function render() {
-    stopAnim();
     resetStyles();
     ALL_MODE_CLASSES.forEach((c) => wrapEl.classList.remove(c));
     wrapEl.classList.add("mode-" + mode);
@@ -123,15 +90,10 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     } else if (mode === MODE_SCROLL) {
       applyMotionFont();
     } else {
-      // tele / marquee — показати накопичений буфер. Стартуємо з pos=0: контент видно
-      // одразу (зверху/зліва), а рух починається, лише коли він переростає екран —
-      // як живі субтитри (без довгого «порожнього» розгону й відчуття «застрягло»).
+      // tele / marquee — показати накопичений буфер, рух веде CSS-анімація.
       liveEl.textContent = buffer;
-      pos = 0;
       applyMotionFont();
-      measure();
-      writeTransform();
-      startLoop();
+      setMotionAnim();
     }
   }
 
@@ -153,28 +115,17 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       render();
     },
 
-    // tele/marquee: додати зафіксований рядок до потоку БЕЗ перезапуску анімації.
+    // tele/marquee: додати зафіксований рядок до потоку й переналаштувати CSS-анімацію.
     appendLine(text) {
       if (!isMotion()) return;
       text = (text || "").replace(/\n+$/, "");
       if (!text.trim().length) return;
       const sep = (mode === MODE_MARQUEE) ? MARQUEE_SEP : "\n";
       buffer = buffer ? (buffer + sep + text) : text;
-      liveEl.textContent = buffer; // додано в кінці — pos не чіпаємо
-
-      const trimmed = trimLeading(buffer);
-      if (trimmed !== buffer) {
-        // Компенсувати зсув від обрізання початку, щоб видима частина не смикнулась.
-        const horiz = (mode === MODE_MARQUEE);
-        const before = horiz ? liveEl.scrollWidth : liveEl.scrollHeight;
-        liveEl.textContent = trimmed;
-        const after = horiz ? liveEl.scrollWidth : liveEl.scrollHeight;
-        pos += (before - after);
-        buffer = trimmed;
-      }
-      measure();
-      if (pos < minPos) pos = minPos; // обрізання могло вкоротити контент
-      if (!rafId) startLoop();
+      buffer = trimLeading(buffer);
+      liveEl.textContent = buffer;
+      applyMotionFont();
+      setMotionAnim();
     },
 
     setMode(m) {
@@ -186,23 +137,11 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     },
     setSpeed(s) {
       speed = s || DEFAULT_SPEED;
-      // Швидкість зчитується в циклі; перезапуск не обов'язковий, лише підстрахуємо,
-      // якщо цикл ще не активний (напр. щойно вийшли з reduced-motion).
-      if (!rafId && isMotion()) startLoop();
+      if (isMotion()) setMotionAnim();
     },
-    // Перелаштунок під зміну розміру/контейнера. У режимах руху НЕ скидаємо позицію
-    // (інакше зміна розміру або push налаштувань/reconnect смикали б прокрутку на старт);
-    // лише оновлюємо шрифт і тримаємо цикл активним.
     refresh() {
-      if (isMotion()) {
-        applyMotionFont();
-        measure();
-        if (pos < minPos) pos = minPos;
-        writeTransform();
-        if (!rafId) startLoop();
-      } else {
-        render();
-      }
+      if (isMotion()) { applyMotionFont(); setMotionAnim(); }
+      else render();
     }
   };
 }

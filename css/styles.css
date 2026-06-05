@@ -312,12 +312,27 @@ html, body {
   white-space: nowrap;
   max-width: none;
 }
-/* Винести live-текст на власний композитний шар GPU: transform-анімація суфлера/
-   бігучки тоді не викликає repaint/reflow тексту — рух плавний навіть на високій швидкості. */
+/* Авто-рух суфлера/бігучки — ЧИСТА CSS-анімація на композиторі GPU (без JS у циклі).
+   Параметри (--vs-from/--vs-to/--vs-dur) виставляє live-view.js один раз на зміну
+   контенту; під час руху браузер нічого не перераховує. */
+@keyframes vs-tele {
+  from { transform: translate3d(0, var(--vs-from, 0), 0); }
+  to   { transform: translate3d(0, var(--vs-to, 0), 0); }
+}
+@keyframes vs-marquee {
+  from { transform: translate3d(var(--vs-from, 0), 0, 0); }
+  to   { transform: translate3d(var(--vs-to, 0), 0, 0); }
+}
 #live-wrap.mode-tele #live,
 #live-wrap.mode-marquee #live {
   will-change: transform;
   backface-visibility: hidden;
+}
+#live-wrap.mode-tele #live {
+  animation: vs-tele var(--vs-dur, 12s) linear infinite;
+}
+#live-wrap.mode-marquee #live {
+  animation: vs-marquee var(--vs-dur, 12s) linear infinite;
 }
 
 /* Банер автоблокування */
@@ -420,4 +435,6 @@ html, body {
   /* Без авто-руху текст лишається статичним — дозволяємо скрол, щоб дістатися решти. */
   #live-wrap.mode-tele { overflow-y: auto; }
   #live-wrap.mode-marquee { overflow-x: auto; }
+  #live-wrap.mode-tele #live,
+  #live-wrap.mode-marquee #live { animation: none !important; transform: none !important; }
 }
