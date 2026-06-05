@@ -19,6 +19,18 @@ const MODE_BTN_IDS = {
   [MODE_MARQUEE]: "mode-marquee"
 };
 
+// Показати поточний розмір тексту у відсотках (1 = 100%).
+function updateSizeValue() {
+  const el = $("size-value");
+  if (el) el.textContent = Math.round(currentSize * 100) + "%";
+}
+
+// Показати поточний рівень швидкості у форматі «рівень/макс».
+function updateSpeedValue() {
+  const el = $("speed-value");
+  if (el) el.textContent = currentSpeed + "/" + SPEED_MAX;
+}
+
 // Підсвітити активну кнопку режиму (активна — без класу, решта — secondary outline).
 function updateModeBtns(mode) {
   Object.keys(MODE_BTN_IDS).forEach((m) => {
@@ -52,6 +64,7 @@ export function getSpeed() { return currentSpeed; }
 export function applyRemoteSettings(size, displayTheme, mode, speed) {
   currentSize = parseFloat(size) || 1;
   store.set(LS_SIZE, String(currentSize));
+  updateSizeValue();
   if (displayTheme != null) {
     applyTheme(displayTheme);
   }
@@ -63,6 +76,7 @@ export function applyRemoteSettings(size, displayTheme, mode, speed) {
   if (speed != null) {
     currentSpeed = parseInt(speed, 10) || DEFAULT_SPEED;
     store.set(LS_SPEED, String(currentSpeed));
+    updateSpeedValue();
   }
 }
 
@@ -74,6 +88,8 @@ export function init(hooks = {}) {
   currentSpeed = parseInt(store.get(LS_SPEED, String(DEFAULT_SPEED)), 10) || DEFAULT_SPEED;
   applyTheme(theme);
   updateModeBtns(currentMode);
+  updateSizeValue();
+  updateSpeedValue();
 
   $("gear").addEventListener("click", function () {
     var hp = $("history-panel");
@@ -94,6 +110,7 @@ export function init(hooks = {}) {
     if (currentSize > SIZE_MAX) currentSize = SIZE_MAX;
     if (currentSize < SIZE_MIN) currentSize = SIZE_MIN;
     store.set(LS_SIZE, String(currentSize));
+    updateSizeValue();
     if (hooks.onSizeChange) hooks.onSizeChange();
   }
 
@@ -118,6 +135,7 @@ export function init(hooks = {}) {
     if (currentSpeed > SPEED_MAX) currentSpeed = SPEED_MAX;
     if (currentSpeed < SPEED_MIN) currentSpeed = SPEED_MIN;
     store.set(LS_SPEED, String(currentSpeed));
+    updateSpeedValue();
     if (hooks.onSpeedChange) hooks.onSpeedChange();
   }
   $("speed-minus").addEventListener("click", () => updateSpeed(-1));

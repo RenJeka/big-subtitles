@@ -55,6 +55,16 @@ export function init() {
     [MODE_MARQUEE]: "sender-mode-marquee"
   };
 
+  function updateDisplaySizeValue() {
+    const el = $("sender-size-value");
+    if (el) el.textContent = Math.round(displaySize * 100) + "%";
+  }
+
+  function updateDisplaySpeedValue() {
+    const el = $("sender-speed-value");
+    if (el) el.textContent = displaySpeed + "/" + SPEED_MAX;
+  }
+
   function updateDisplayModeBtns(mode) {
     Object.keys(SENDER_MODE_BTN_IDS).forEach((m) => {
       const btn = $(SENDER_MODE_BTN_IDS[m]);
@@ -71,6 +81,8 @@ export function init() {
   applySenderTheme(senderTheme);
   updateDisplayThemeBtns(displayTheme);
   updateDisplayModeBtns(displayMode);
+  updateDisplaySizeValue();
+  updateDisplaySpeedValue();
 
   // ===================== Кімната =====================
   const room = resolveRoom();
@@ -146,6 +158,7 @@ export function init() {
     if (displaySize > SIZE_MAX) displaySize = SIZE_MAX;
     if (displaySize < SIZE_MIN) displaySize = SIZE_MIN;
     store.set(LS_SIZE, String(displaySize));
+    updateDisplaySizeValue();
     publishSettings();
   }
 
@@ -170,6 +183,7 @@ export function init() {
     if (displaySpeed > SPEED_MAX) displaySpeed = SPEED_MAX;
     if (displaySpeed < SPEED_MIN) displaySpeed = SPEED_MIN;
     store.set(LS_SPEED, String(displaySpeed));
+    updateDisplaySpeedValue();
     publishSettings();
   }
   $("sender-speed-minus").addEventListener("click", () => updateDisplaySpeed(-1));

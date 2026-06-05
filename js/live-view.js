@@ -41,10 +41,25 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     liveEl.style.fontSize = scrollFontPx(wrapEl, getSize()) + "px";
   }
 
+  // Поточний зсув #live (px) із матриці трансформації — щоб продовжити рух без стрибка
+  // на початок при зміні швидкості/розміру.
+  function readTranslate() {
+    const t = getComputedStyle(liveEl).transform;
+    if (!t || t === "none") return null;
+    const inner = t.slice(t.indexOf("(") + 1, t.lastIndexOf(")"));
+    const v = inner.split(",").map(function (n) { return parseFloat(n); });
+    if (t.indexOf("matrix3d") === 0) {
+      return (mode === MODE_MARQUEE) ? v[12] : v[13];
+    }
+    return (mode === MODE_MARQUEE) ? v[4] : v[5]; // matrix(a,b,c,d,tx,ty)
+  }
+
   // Налаштувати CSS-анімацію руху під поточний контент/швидкість.
   // ЄДИНЕ місце, де читаємо layout (scrollHeight/scrollWidth) — і лише на ЗМІНУ
   // контенту/розміру, а не щокадрово. Далі рух веде CSS сам.
-  function setMotionAnim() {
+  // continueFromCurrent — продовжити з поточної позиції (зміна швидкості/розміру),
+  // а не запускати з початку.
+  function setMotionAnim(continueFromCurrent) {
     if (!buffer) {                      // нема тексту — нема руху
       liveEl.style.animation = "none";
       liveEl.style.transform = "";
@@ -59,14 +74,29 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       from = wrapEl.clientHeight; to = -sh; distance = wrapEl.clientHeight + sh;
     }
     const dur = Math.max(1, distance / pxPerSec(mode, speed)); // сек, сталий px/с
+
+    // Продовження: обчислюємо пройдену частку p від поточного зсуву й вносимо її як
+    // від'ємний animation-delay у ті самі keyframes (full from→to). Так рух не «стрибає»
+    // на старт, а цілісність нескінченного циклу зберігається.
+    let delay = 0;
+    if (continueFromCurrent && distance > 0) {
+      const cur = readTranslate();
+      if (cur != null) {
+        let p = (from - cur) / distance;
+        if (p < 0 || p >= 1) p = 0;
+        delay = -p * dur;
+      }
+    }
+
     liveEl.style.setProperty("--vs-from", from + "px");
     liveEl.style.setProperty("--vs-to", to + "px");
     liveEl.style.setProperty("--vs-dur", dur + "s");
     // Перезапустити анімацію, щоб нові значення застосувались. Один reflow на зміну
-    // контенту (не на кадр): inline-"none" → reflow → "" (повертає клас із keyframes).
+    // контенту (не на кадр): inline-"none" → reflow → повний inline-shorthand із delay.
+    const name = (mode === MODE_MARQUEE) ? "vs-marquee" : "vs-tele";
     liveEl.style.animation = "none";
     void liveEl.offsetWidth;
-    liveEl.style.animation = "";
+    liveEl.style.animation = name + " " + dur + "s linear " + delay + "s infinite";
   }
 
   // Скинути всі inline-стилі/змінні, які виставляли різні режими.
@@ -137,11 +167,21 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     },
     setSpeed(s) {
       speed = s || DEFAULT_SPEED;
-      if (isMotion()) setMotionAnim();
+      if (isMotion()) setMotionAnim(true); // нова швидкість — продовжити з поточної позиції
     },
     refresh() {
-      if (isMotion()) { applyMotionFont(); setMotionAnim(); }
-      else render();
+      if (isMotion()) {
+        applyMotionFont();
+        setMotionAnim(true); // зміна розміру/геометрії — рух продовжується, а не з початку
+      } else if (mode === MODE_SCROLL) {
+        // Зберегти позицію прокрутки при зміні розміру (текст лишається на місці).
+        const prev = wrapEl.scrollHeight;
+        const ratio = prev > 0 ? wrapEl.scrollTop / prev : 0;
+        render();
+        wrapEl.scrollTop = ratio * wrapEl.scrollHeight;
+      } else {
+        render(); // fit — перерахунок вписаного шрифту
+      }
     }
   };
 }

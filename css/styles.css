@@ -204,6 +204,27 @@ html, body {
 }
 .settings-grid button svg { margin: 0 !important; }
 
+/* Степер «➖ значення ➕» — кнопки по краях, поточне число в центрі. */
+.stepper {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.stepper button {
+  margin: 0;
+  padding: 12px 4px !important;
+  font-size: 1.1rem !important;
+}
+.stepper-value {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--fg);
+  min-width: 3.2em;
+  font-variant-numeric: tabular-nums;
+}
+
 
 /* ---------- Display ---------- */
 #screen-display { flex-direction: column; position: relative; }

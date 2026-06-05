@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Andika:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-  <link rel="stylesheet" href="css/styles.css?v=3">
+  <link rel="stylesheet" href="css/styles.css?v=4">
 </head>
 <body>
 
@@ -44,8 +44,9 @@
     </div>
     <div id="settings" class="settings-panel">
       <label>Розмір тексту</label>
-      <div class="settings-grid">
+      <div class="stepper">
         <button id="size-minus" class="secondary outline">➖</button>
+        <span id="size-value" class="stepper-value">100%</span>
         <button id="size-plus" class="secondary outline">➕</button>
       </div>
       <label>Режим показу</label>
@@ -57,8 +58,9 @@
       </div>
       <div id="speed-row" class="hidden">
         <label>Швидкість</label>
-        <div class="settings-grid">
+        <div class="stepper">
           <button id="speed-minus" class="secondary outline">➖</button>
+          <span id="speed-value" class="stepper-value">2/6</span>
           <button id="speed-plus" class="secondary outline">➕</button>
         </div>
       </div>
@@ -105,8 +107,9 @@
     
     <div id="sender-settings" class="settings-panel">
       <label>Розмір тексту на дисплеї</label>
-      <div class="settings-grid">
+      <div class="stepper">
         <button id="sender-size-minus" class="secondary outline">➖</button>
+        <span id="sender-size-value" class="stepper-value">100%</span>
         <button id="sender-size-plus" class="secondary outline">➕</button>
       </div>
       <label>Режим показу на дисплеї</label>
@@ -118,8 +121,9 @@
       </div>
       <div id="sender-speed-row" class="hidden">
         <label>Швидкість</label>
-        <div class="settings-grid">
+        <div class="stepper">
           <button id="sender-speed-minus" class="secondary outline">➖</button>
+          <span id="sender-speed-value" class="stepper-value">2/6</span>
           <button id="sender-speed-plus" class="secondary outline">➕</button>
         </div>
       </div>

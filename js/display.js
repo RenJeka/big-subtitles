@@ -35,6 +35,9 @@ export function init() {
 
   const liveView = createLiveView(liveEl, liveWrap, settings.getSize);
   let lastText = ""; // останній live-текст (для fit/scroll; tele/marquee накопичує сам)
+  // Після commit Sender шле порожній live (очищає retained-поле) — у fit/scroll ми лишаємо
+  // відправлене повідомлення на екрані, тож наступний порожній live пропускаємо.
+  let ignoreNextEmptyLive = false;
 
   function isMotionMode() {
     const m = settings.getMode();
@@ -112,11 +115,21 @@ export function init() {
         if (isMotionMode()) {
           liveView.appendLine(msg.text); // суфлер/бігучка: додати у безперервний потік
         } else {
-          setLive("");
+          // fit/scroll: відправлене повідомлення лишається на екрані (не стираємо).
+          setLive(msg.text);
+          ignoreNextEmptyLive = true;
         }
       } else {
         // live-текст (набір) — лише для fit/scroll; у режимах руху ігноруємо.
-        if (!isMotionMode()) setLive(msg.text || "");
+        if (!isMotionMode()) {
+          const t = msg.text || "";
+          if (t === "" && ignoreNextEmptyLive) {
+            ignoreNextEmptyLive = false; // це порожній live після commit — показане лишаємо
+          } else {
+            ignoreNextEmptyLive = false;
+            setLive(t);
+          }
+        }
       }
     });
   }, $("status-display"), (isConnected) => {
