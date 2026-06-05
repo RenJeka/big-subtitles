@@ -25,8 +25,8 @@
   <!-- Display -->
   <section id="screen-display" class="screen">
     <div class="status" id="status-display"><span class="dot"></span><span class="txt">з'єднання…</span></div>
-    <button id="gear" title="Налаштування">⚙</button>
-    <div id="settings">
+    <button id="gear" class="gear-btn" title="Налаштування">⚙</button>
+    <div id="settings" class="settings-panel">
       <label>Розмір тексту</label>
       <input type="range" id="size-range" min="0.35" max="1" step="0.05" value="1">
       <label>Тема</label>
@@ -43,13 +43,6 @@
     <div id="history"></div>
     <div id="live-wrap"><div id="live" class="placeholder">Очікую текст…</div></div>
 
-    <div id="qr-box">
-      <div id="qr"></div>
-      <div class="qr-hint">Наведіть камеру телефона на цей код</div>
-      <div id="qr-link"></div>
-      <button id="qr-toggle">Сховати</button>
-    </div>
-
     <div id="wake-hint">
       <span>Щоб екран не гас: Налаштування → Дисплей → Автоблокування → Ніколи.</span>
       <button id="wake-ok">Гаразд</button>
@@ -59,12 +52,42 @@
   <!-- Sender -->
   <section id="screen-sender" class="screen">
     <div class="status" id="status-sender"><span class="dot"></span><span class="txt">з'єднання…</span></div>
-    <div id="sender-head"></div>
+    <div id="sender-head">
+      <button id="sender-gear" class="gear-btn" title="Налаштування">⚙</button>
+    </div>
+    <div id="sender-settings" class="settings-panel">
+      <label>Розмір тексту на дисплеї</label>
+      <input type="range" id="sender-size-range" min="0.35" max="1" step="0.05" value="1">
+      <label>Моя тема</label>
+      <div class="row">
+        <button id="sender-theme-dark">Темна</button>
+        <button id="sender-theme-light" class="off">Світла</button>
+      </div>
+      <label>Тема дисплею →</label>
+      <div class="row">
+        <button id="sender-display-theme-dark">Темна</button>
+        <button id="sender-display-theme-light" class="off">Світла</button>
+      </div>
+      <label>Парування</label>
+      <div class="row">
+        <button id="sender-show-qr">Показати QR</button>
+      </div>
+    </div>
     <textarea id="input" placeholder="Пишіть тут…  (Enter — новий рядок на дисплеї)" autocapitalize="sentences" autocomplete="off" autocorrect="on" lang="uk"></textarea>
     <div id="sender-foot">
       <button id="clear-btn">Очистити</button>
     </div>
   </section>
+
+  <!-- QR-модал (спільний для Display і Sender) -->
+  <div id="qr-modal">
+    <div id="qr-modal-box">
+      <div id="qr"></div>
+      <div class="qr-hint">Наведіть камеру телефона на цей код</div>
+      <div id="qr-link"></div>
+      <button id="qr-modal-close">✕ Закрити</button>
+    </div>
+  </div>
 
   <!-- Зовнішні бібліотеки з CDN (класичні скрипти, дають глобали mqtt / QRCode) -->
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>

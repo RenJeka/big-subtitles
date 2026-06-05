@@ -18,13 +18,17 @@ export const KEEPALIVE_SEC = 30;
 // Типи повідомлень протоколу
 export const MSG_TYPE_LIVE = "live";
 export const MSG_TYPE_COMMIT = "commit";
+// Налаштування: Sender надсилає Display розмір + тему (retain:true)
+export const MSG_TYPE_SETTINGS = "settings";
 
 // ===================== Ключі localStorage =====================
 
 export const LS_ROOM = "velyki.room";
-export const LS_THEME = "velyki.theme";
-export const LS_SIZE = "velyki.size";
+export const LS_THEME = "velyki.theme";         // тема Display (локальна)
+export const LS_SIZE = "velyki.size";            // розмір тексту Display
 export const LS_WAKE = "velyki.wakeDismissed";
+export const LS_SENDER_THEME = "velyki.senderTheme"; // власна тема Sender
+export const LS_PUSH_THEME = "velyki.pushTheme";     // тема Display, яку Sender хоче надіслати
 
 // ===================== Ролі / екрани =====================
 

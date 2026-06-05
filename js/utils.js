@@ -1,5 +1,5 @@
-// Дрібні хелпери: DOM, генерація токена, парсинг URL, кімната, статус.
-import { LS_ROOM, TOKEN_ALPHABET, TOKEN_LENGTH } from "./config.js";
+// Дрібні хелпери: DOM, генерація токена, парсинг URL, кімната, статус, QR-модал.
+import { LS_ROOM, TOKEN_ALPHABET, TOKEN_LENGTH, QR_SIZE, QR_CORRECT_LEVEL, TEXT_QR_UNAVAILABLE } from "./config.js";
 import * as store from "./store.js";
 
 export function $(id) { return document.getElementById(id); }
@@ -54,4 +54,40 @@ export function setStatus(el, state, text) {
   if (state === "ok") el.classList.add("is-connected");
   if (state === "err") el.classList.add("is-error");
   el.querySelector(".txt").textContent = text;
+}
+
+// ===================== QR-модал =====================
+// Лінива ініціалізація: QR генерується лише раз (при першому відкритті).
+let _qrReady = false;
+
+export function initQrModal(room) {
+  const senderUrl = location.origin + location.pathname + "?role=sender#room=" + room;
+  $("qr-link").textContent = senderUrl;
+  try {
+    if (typeof QRCode !== "undefined") {
+      new QRCode($("qr"), {
+        text: senderUrl,
+        width: QR_SIZE, height: QR_SIZE,
+        correctLevel: QRCode.CorrectLevel[QR_CORRECT_LEVEL]
+      });
+    } else {
+      $("qr").textContent = TEXT_QR_UNAVAILABLE;
+    }
+  } catch (e) {
+    $("qr").textContent = TEXT_QR_UNAVAILABLE;
+  }
+  // Закрити за кліком поза модального вікна
+  const modal = $("qr-modal");
+  modal.addEventListener("click", (e) => { if (e.target === modal) closeQrModal(); });
+  $("qr-modal-close").addEventListener("click", closeQrModal);
+  _qrReady = true;
+}
+
+export function openQrModal() {
+  if (!_qrReady) return;
+  $("qr-modal").classList.add("open");
+}
+
+export function closeQrModal() {
+  $("qr-modal").classList.remove("open");
 }

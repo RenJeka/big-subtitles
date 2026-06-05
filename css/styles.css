@@ -10,7 +10,7 @@
   --warn: #ff9f0a;
   --err: #ff453a;
 }
-/* Світла тема для Display */
+/* Світла тема */
 body.theme-light {
   --bg: #fff;
   --fg: #000;
@@ -69,8 +69,45 @@ html, body {
 .status.is-connected .dot { background: var(--ok); }
 .status.is-error .dot { background: var(--err); }
 
+/* ---------- Спільний: кнопка шестірні та панель налаштувань ---------- */
+.gear-btn {
+  position: fixed; top: env(safe-area-inset-top, 8px); right: 8px;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(127,127,127,0.18); color: var(--fg);
+  border: none; font-size: 20px; line-height: 38px; text-align: center;
+  opacity: 0.35; cursor: pointer; z-index: 60;
+}
+.gear-btn:active { opacity: 1; }
+.settings-panel {
+  position: fixed; top: 52px; right: 8px;
+  background: var(--panel); color: var(--fg);
+  border-radius: 14px; padding: 16px; z-index: 60;
+  display: none; width: 260px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+.settings-panel.open { display: block; }
+.settings-panel label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 6px; font-weight: 700; letter-spacing: 0.02em; }
+.settings-panel label:first-child { margin-top: 0; }
+.settings-panel input[type=range] { width: 100%; accent-color: var(--accent); }
+.settings-panel .row { display: flex; gap: 8px; }
+.settings-panel button {
+  flex: 1; padding: 10px; border: 2px solid var(--accent); border-radius: 10px;
+  background: var(--accent); color: #fff; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+/* Неактивний стан: явно «прибраний» — без заливки, приглушений. */
+.settings-panel button.off {
+  background: transparent; border-color: rgba(127,127,127,0.4);
+  color: var(--muted); font-weight: 400; opacity: 0.8;
+}
+
 /* ---------- Display ---------- */
 #screen-display { flex-direction: column; position: relative; }
+
+/* Display використовує загальні .gear-btn та .settings-panel */
+#gear { /* успадковує .gear-btn */ }
+#settings { /* успадковує .settings-panel */ }
+
 #history {
   flex: 0 1 auto;
   max-height: 38%;
@@ -123,59 +160,6 @@ html, body {
 }
 #live.placeholder { color: var(--muted); font-weight: 400; }
 
-/* Куток налаштувань */
-#gear {
-  position: fixed; top: env(safe-area-inset-top, 8px); right: 8px;
-  width: 38px; height: 38px; border-radius: 50%;
-  background: rgba(127,127,127,0.18); color: var(--fg);
-  border: none; font-size: 20px; line-height: 38px; text-align: center;
-  opacity: 0.35; cursor: pointer; z-index: 60;
-}
-#gear:active { opacity: 1; }
-#settings {
-  position: fixed; top: 52px; right: 8px;
-  background: var(--panel); color: var(--fg);
-  border-radius: 14px; padding: 16px; z-index: 60;
-  display: none; width: 260px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-}
-#settings.open { display: block; }
-#settings label { display: block; font-size: 14px; margin: 10px 0 6px; }
-#settings input[type=range] { width: 100%; }
-#settings .row { display: flex; gap: 8px; }
-#settings button {
-  flex: 1; padding: 10px; border: 2px solid var(--accent); border-radius: 10px;
-  background: var(--accent); color: #fff; font-size: 14px; font-weight: 700;
-  cursor: pointer; transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
-}
-/* Неактивний стан: явно «прибраний» — без заливки, приглушений. */
-#settings button.off {
-  background: transparent; border-color: rgba(127,127,127,0.4);
-  color: var(--muted); font-weight: 400; opacity: 0.8;
-}
-
-/* QR / парування */
-#qr-box {
-  position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  transform: translateX(-50%);
-  background: #fff; color: #000;
-  border-radius: 16px; padding: 16px;
-  text-align: center; z-index: 55;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
-  max-width: 90vw;
-}
-#qr-box.minimized { padding: 8px 12px; }
-#qr-box.minimized #qr, #qr-box.minimized .qr-hint, #qr-box.minimized #qr-link { display: none; }
-#qr { display: inline-block; margin: 0 auto; }
-#qr img, #qr canvas { display: block; }
-.qr-hint { font-size: 14px; margin-top: 10px; color: #333; }
-#qr-link { font-size: 11px; color: #555; word-break: break-all; margin-top: 8px; max-width: 240px; }
-#qr-toggle {
-  border: none; background: var(--accent); color: #fff;
-  border-radius: 10px; padding: 8px 14px; font-size: 14px; cursor: pointer;
-  margin-top: 10px;
-}
-
 /* Банер автоблокування */
 #wake-hint {
   position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px));
@@ -192,6 +176,10 @@ html, body {
   padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
   display: flex; justify-content: flex-end;
 }
+/* sender-gear і sender-settings успадковують загальні стилі */
+#sender-gear { /* .gear-btn */ }
+#sender-settings { /* .settings-panel */ }
+
 #input {
   flex: 1 1 auto;
   width: 100%;
@@ -210,11 +198,48 @@ html, body {
   border: none; border-radius: 14px;
   background: var(--panel); color: var(--fg); cursor: pointer;
 }
+
+/* ---------- QR-модал (спільний) ---------- */
+#qr-modal {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.72);
+  z-index: 200;
+  align-items: center; justify-content: center;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+#qr-modal.open { display: flex; }
+#qr-modal-box {
+  background: #fff; color: #000;
+  border-radius: 20px; padding: 24px 20px;
+  text-align: center;
+  max-width: min(320px, 90vw);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  animation: modal-in 0.2s ease;
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+#qr { display: inline-block; margin: 0 auto; }
+#qr img, #qr canvas { display: block; }
+.qr-hint { font-size: 14px; margin-top: 12px; color: #444; }
+#qr-link { font-size: 11px; color: #666; word-break: break-all; margin-top: 8px; max-width: 260px; }
+#qr-modal-close {
+  display: block; width: 100%; margin-top: 16px;
+  border: none; background: #111; color: #fff;
+  border-radius: 12px; padding: 12px; font-size: 15px; cursor: pointer;
+  font-family: inherit;
+}
+#qr-modal-close:active { background: #333; }
+
 .hidden { display: none !important; }
 
 /* Поважати системне налаштування зменшеного руху. */
 @media (prefers-reduced-motion: reduce) {
   #history .line { transition: none; }
   #history .line.line-enter { opacity: 1; transform: none; }
-  #settings button { transition: none; }
+  .settings-panel button { transition: none; }
+  #qr-modal-box { animation: none; }
 }

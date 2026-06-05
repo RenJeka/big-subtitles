@@ -1,12 +1,10 @@
-// Режим Display (iPad): великий автомасштабований live-текст, історія, QR.
+// Режим Display (iPad): великий автомасштабований live-текст, історія, QR-модал.
 // Тема/розмір/банер делеговано в settings, автомасштаб — у fit-text.
-// Глобал `QRCode` приходить із CDN-скрипта (підключений у index.html).
 import {
-  HISTORY_LIMIT, QR_SIZE, QR_CORRECT_LEVEL,
-  ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT,
-  TEXT_PLACEHOLDER, TEXT_QR_UNAVAILABLE
+  HISTORY_LIMIT, ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
+  TEXT_PLACEHOLDER
 } from "./config.js";
-import { $, show, resolveRoom, makeToken, saveRoom } from "./utils.js";
+import { $, show, resolveRoom, makeToken, saveRoom, initQrModal, openQrModal } from "./utils.js";
 import { connect, decode } from "./mqtt-client.js";
 import { fit } from "./fit-text.js";
 import * as settings from "./settings.js";
@@ -24,7 +22,6 @@ export function init() {
   const historyEl = $("history");
   const liveEl = $("live");
   const liveWrap = $("live-wrap");
-  let qrMinimized = false;
 
   const fitLive = () => fit(liveEl, liveWrap, settings.getSize());
 
@@ -55,41 +52,28 @@ export function init() {
     fitLive();
   }
 
-  const minimizeQr = () => { $("qr-box").classList.add("minimized"); qrMinimized = true; };
-  const showQr = () => { $("qr-box").classList.remove("minimized"); qrMinimized = false; };
-
   connect(room, (raw) => {
     const msg = decode(raw);
-    if (msg.type === MSG_TYPE_COMMIT) {
+    if (msg.type === MSG_TYPE_SETTINGS) {
+      // Sender надіслав налаштування — застосувати (Sender має пріоритет)
+      settings.applyRemoteSettings(msg.size, msg.displayTheme);
+      fitLive();
+    } else if (msg.type === MSG_TYPE_COMMIT) {
       appendLine(msg.text);
       setLive("");
     } else {
       setLive(msg.text || "");
     }
-    // згорнути QR після першого реального тексту
-    if (!qrMinimized && msg.text && msg.text.trim().length) minimizeQr();
   }, $("status-display"));
 
-  // ---- QR ----
-  const senderUrl = location.origin + location.pathname + "?role=sender#room=" + room;
-  $("qr-link").textContent = senderUrl;
-  try {
-    if (typeof QRCode !== "undefined") {
-      new QRCode($("qr"), { text: senderUrl, width: QR_SIZE, height: QR_SIZE, correctLevel: QRCode.CorrectLevel[QR_CORRECT_LEVEL] });
-    } else {
-      $("qr").textContent = TEXT_QR_UNAVAILABLE;
-    }
-  } catch (e) {
-    $("qr").textContent = TEXT_QR_UNAVAILABLE;
-  }
-  $("qr-toggle").addEventListener("click", minimizeQr);
+  // ---- QR (модальний) ----
+  initQrModal(room);
 
   // ---- Налаштування (тема/розмір/банер/QR) ----
-  settings.init({ onSizeChange: fitLive, onShowQr: showQr });
+  settings.init({ onSizeChange: fitLive, onShowQr: openQrModal });
 
   window.addEventListener("resize", fitLive);
   window.addEventListener("orientationchange", () => setTimeout(fitLive, ORIENTATION_DELAY_MS));
 
   fitLive();
 }
-
