@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>ВеликіСлова</title>
+  <style>
+    :root {
+      --bg: #000;
+      --fg: #fff;
+      --muted: #888;
+      --accent: #4da3ff;
+      --panel: #1c1c1e;
+      --ok: #34c759;
+      --warn: #ff9f0a;
+      --err: #ff453a;
+    }
+    /* Світла тема для Display */
+    body.theme-light {
+      --bg: #fff;
+      --fg: #000;
+      --muted: #666;
+      --panel: #f0f0f0;
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; width: 100%;
+      background: var(--bg); color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    .screen { display: none; height: 100%; width: 100%; }
+    .screen.active { display: flex; }
+
+    /* ---------- Стартовий екран ---------- */
+    #screen-start {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 24px;
+      text-align: center;
+    }
+    #screen-start h1 { font-size: 9vw; margin: 0; }
+    #screen-start p { color: var(--muted); font-size: 4.5vw; max-width: 600px; margin: 0; }
+    .start-btn {
+      width: 100%; max-width: 480px;
+      padding: 28px 20px;
+      font-size: 6vw;
+      border: none; border-radius: 18px;
+      background: var(--accent); color: #fff;
+      cursor: pointer;
+    }
+    .start-btn.secondary { background: var(--panel); color: var(--fg); }
+    .privacy-note { font-size: 3.4vw; color: var(--muted); max-width: 480px; }
+
+    /* ---------- Спільне: статус з'єднання ---------- */
+    .status {
+      position: fixed; top: env(safe-area-inset-top, 8px); left: 8px;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--muted);
+      background: rgba(127,127,127,0.12);
+      padding: 4px 10px; border-radius: 12px;
+      z-index: 50; pointer-events: none;
+    }
+    .status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warn); }
+    .status.is-connected .dot { background: var(--ok); }
+    .status.is-error .dot { background: var(--err); }
+
+    /* ---------- Display ---------- */
+    #screen-display { flex-direction: column; position: relative; }
+    #history {
+      flex: 0 1 auto;
+      max-height: 38%;
+      overflow-y: auto;
+      padding: 10px 24px 0;
+      -webkit-overflow-scrolling: touch;
+    }
+    #history .line {
+      font-size: clamp(20px, 4vh, 48px);
+      line-height: 1.2;
+      color: var(--muted);
+      white-space: pre-wrap;
+      word-break: break-word;
+      margin: 6px 0;
+    }
+    #live-wrap {
+      flex: 1 1 auto;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px 24px calc(16px + env(safe-area-inset-bottom, 0px));
+      overflow: hidden;
+      min-height: 0;
+    }
+    #live {
+      font-weight: 700;
+      line-height: 1.1;
+      text-align: center;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-width: 100%;
+    }
+    #live.placeholder { color: var(--muted); font-weight: 400; }
+
+    /* Куток налаштувань */
+    #gear {
+      position: fixed; top: env(safe-area-inset-top, 8px); right: 8px;
+      width: 38px; height: 38px; border-radius: 50%;
+      background: rgba(127,127,127,0.18); color: var(--fg);
+      border: none; font-size: 20px; line-height: 38px; text-align: center;
+      opacity: 0.35; cursor: pointer; z-index: 60;
+    }
+    #gear:active { opacity: 1; }
+    #settings {
+      position: fixed; top: 52px; right: 8px;
+      background: var(--panel); color: var(--fg);
+      border-radius: 14px; padding: 16px; z-index: 60;
+      display: none; width: 260px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    }
+    #settings.open { display: block; }
+    #settings label { display: block; font-size: 14px; margin: 10px 0 6px; }
+    #settings input[type=range] { width: 100%; }
+    #settings .row { display: flex; gap: 8px; }
+    #settings button {
+      flex: 1; padding: 10px; border: none; border-radius: 10px;
+      background: var(--accent); color: #fff; font-size: 14px; cursor: pointer;
+    }
+    #settings button.off { background: rgba(127,127,127,0.25); color: var(--fg); }
+
+    /* QR / парування */
+    #qr-box {
+      position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%);
+      background: #fff; color: #000;
+      border-radius: 16px; padding: 16px;
+      text-align: center; z-index: 55;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+      max-width: 90vw;
+    }
+    #qr-box.minimized { padding: 8px 12px; }
+    #qr-box.minimized #qr, #qr-box.minimized .qr-hint, #qr-box.minimized #qr-link { display: none; }
+    #qr { display: inline-block; margin: 0 auto; }
+    #qr img, #qr canvas { display: block; }
+    .qr-hint { font-size: 14px; margin-top: 10px; color: #333; }
+    #qr-link { font-size: 11px; color: #555; word-break: break-all; margin-top: 8px; max-width: 240px; }
+    #qr-toggle {
+      border: none; background: var(--accent); color: #fff;
+      border-radius: 10px; padding: 8px 14px; font-size: 14px; cursor: pointer;
+      margin-top: 10px;
+    }
+
+    /* Банер автоблокування */
+    #wake-hint {
+      position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+      background: var(--panel); color: var(--fg);
+      border-radius: 12px; padding: 12px 14px; font-size: 14px; z-index: 70;
+      display: none; align-items: center; gap: 12px;
+    }
+    #wake-hint.show { display: flex; }
+    #wake-hint button { border: none; background: var(--accent); color: #fff; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+
+    /* ---------- Sender ---------- */
+    #screen-sender { flex-direction: column; padding: 0; }
+    #sender-head {
+      padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
+      display: flex; justify-content: flex-end;
+    }
+    #input {
+      flex: 1 1 auto;
+      width: 100%;
+      border: none; outline: none; resize: none;
+      background: var(--bg); color: var(--fg);
+      font-size: 7vw; line-height: 1.3;
+      padding: 12px 16px;
+      font-family: inherit;
+    }
+    #sender-foot {
+      padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+      display: flex; gap: 10px;
+    }
+    #clear-btn {
+      flex: 1; padding: 18px; font-size: 5vw;
+      border: none; border-radius: 14px;
+      background: var(--panel); color: var(--fg); cursor: pointer;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Стартовий екран -->
+  <section id="screen-start" class="screen">
+    <h1>ВеликіСлова</h1>
+    <p>Пишіть на телефоні — текст з'являється великим шрифтом на іншому екрані в реальному часі.</p>
+    <button class="start-btn" id="btn-display">📺 Я — Дисплей (iPad)</button>
+    <button class="start-btn secondary" id="btn-sender">⌨️ Я — пишу (телефон)</button>
+    <p class="privacy-note">Дані ніде не зберігаються. Брокер публічний — не передавайте чутливу інформацію.</p>
+  </section>
+
+  <!-- Display -->
+  <section id="screen-display" class="screen">
+    <div class="status" id="status-display"><span class="dot"></span><span class="txt">з'єднання…</span></div>
+    <button id="gear" title="Налаштування">⚙</button>
+    <div id="settings">
+      <label>Розмір тексту</label>
+      <input type="range" id="size-range" min="0.35" max="1" step="0.05" value="1">
+      <label>Тема</label>
+      <div class="row">
+        <button id="theme-dark">Темна</button>
+        <button id="theme-light" class="off">Світла</button>
+      </div>
+      <label>Парування</label>
+      <div class="row">
+        <button id="show-qr">Показати QR</button>
+      </div>
+    </div>
+
+    <div id="history"></div>
+    <div id="live-wrap"><div id="live" class="placeholder">Очікую текст…</div></div>
+
+    <div id="qr-box">
+      <div id="qr"></div>
+      <div class="qr-hint">Наведіть камеру телефона на цей код</div>
+      <div id="qr-link"></div>
+      <button id="qr-toggle">Сховати</button>
+    </div>
+
+    <div id="wake-hint">
+      <span>Щоб екран не гас: Налаштування → Дисплей → Автоблокування → Ніколи.</span>
+      <button id="wake-ok">Гаразд</button>
+    </div>
+  </section>
+
+  <!-- Sender -->
+  <section id="screen-sender" class="screen">
+    <div class="status" id="status-sender"><span class="dot"></span><span class="txt">з'єднання…</span></div>
+    <div id="sender-head"></div>
+    <textarea id="input" placeholder="Пишіть тут…  (Enter — новий рядок на дисплеї)" autocapitalize="sentences" autocomplete="off" autocorrect="on" lang="uk"></textarea>
+    <div id="sender-foot">
+      <button id="clear-btn">Очистити</button>
+    </div>
+  </section>
+
+  <!-- Зовнішні бібліотеки з CDN -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+
+  <script>
+  (function () {
+    "use strict";
+
+    // ---------- Константи ----------
+    var BROKER = "wss://broker.emqx.io:8084/mqtt";
+    var TOPIC_PREFIX = "velyki/";
+    var LS_ROOM = "velyki.room";
+    var LS_THEME = "velyki.theme";
+    var LS_SIZE = "velyki.size";
+    var LS_WAKE = "velyki.wakeDismissed";
+    var HISTORY_LIMIT = 10;
+    var DEBOUNCE_MS = 150;
+
+    // ---------- Утиліти ----------
+    function $(id) { return document.getElementById(id); }
+
+    function show(screenId) {
+      var screens = document.querySelectorAll(".screen");
+      for (var i = 0; i < screens.length; i++) screens[i].classList.remove("active");
+      $(screenId).classList.add("active");
+    }
+
+    function makeToken() {
+      var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      var bytes = new Uint8Array(24);
+      crypto.getRandomValues(bytes);
+      var out = "";
+      for (var i = 0; i < bytes.length; i++) out += alphabet[bytes[i] % alphabet.length];
+      return out; // 24 символи base62
+    }
+
+    function getHashParam(name) {
+      var h = location.hash.replace(/^#/, "");
+      var parts = h.split("&");
+      for (var i = 0; i < parts.length; i++) {
+        var kv = parts[i].split("=");
+        if (kv[0] === name) return decodeURIComponent(kv[1] || "");
+      }
+      return null;
+    }
+
+    function getQueryParam(name) {
+      var s = location.search.replace(/^\?/, "");
+      var parts = s.split("&");
+      for (var i = 0; i < parts.length; i++) {
+        var kv = parts[i].split("=");
+        if (kv[0] === name) return decodeURIComponent(kv[1] || "");
+      }
+      return null;
+    }
+
+    function resolveRoom() {
+      var room = getHashParam("room");
+      if (!room) { try { room = localStorage.getItem(LS_ROOM); } catch (e) {} }
+      return room || null;
+    }
+
+    function saveRoom(room) {
+      try { localStorage.setItem(LS_ROOM, room); } catch (e) {}
+    }
+
+    function setStatus(el, state, text) {
+      el.classList.remove("is-connected", "is-error");
+      if (state === "ok") el.classList.add("is-connected");
+      if (state === "err") el.classList.add("is-error");
+      el.querySelector(".txt").textContent = text;
+    }
+
+    // ---------- MQTT ----------
+    function connect(room, onMessage, statusEl) {
+      if (typeof mqtt === "undefined") {
+        setStatus(statusEl, "err", "немає бібліотеки MQTT");
+        return null;
+      }
+      var topic = TOPIC_PREFIX + room;
+      var clientId = "velyki_" + Math.random().toString(16).slice(2, 10);
+      var client = mqtt.connect(BROKER, {
+        clientId: clientId,
+        clean: true,
+        reconnectPeriod: 2000,
+        connectTimeout: 8000,
+        keepalive: 30
+      });
+
+      client.on("connect", function () {
+        setStatus(statusEl, "ok", "з'єднано");
+        if (onMessage) client.subscribe(topic);
+      });
+      client.on("reconnect", function () { setStatus(statusEl, "", "перепідключення…"); });
+      client.on("offline", function () { setStatus(statusEl, "", "немає мережі…"); });
+      client.on("close", function () { setStatus(statusEl, "", "роз'єднано…"); });
+      client.on("error", function () { setStatus(statusEl, "err", "помилка з'єднання"); });
+
+      if (onMessage) {
+        client.on("message", function (t, payload) {
+          if (t !== topic) return;
+          onMessage(payload.toString());
+        });
+      }
+
+      return { client: client, topic: topic };
+    }
+
+    // ---------- Протокол повідомлень ----------
+    // { type: "live", text: "..." }  — поточний рядок (retain)
+    // { type: "commit", text: "..." } — зафіксувати рядок в історію (без retain)
+    function encode(type, text) { return JSON.stringify({ type: type, text: text }); }
+    function decode(raw) {
+      try {
+        var o = JSON.parse(raw);
+        if (o && typeof o.type === "string") return o;
+      } catch (e) {}
+      // Сумісність: голий текст трактуємо як live
+      return { type: "live", text: raw };
+    }
+
+    // ================= DISPLAY =================
+    function initDisplay() {
+      show("screen-display");
+
+      var room = resolveRoom();
+      if (!room) { room = makeToken(); }
+      saveRoom(room);
+      if (location.hash.indexOf("room=") === -1) {
+        location.hash = "room=" + room;
+      }
+
+      // Налаштування з localStorage
+      var theme, size;
+      try { theme = localStorage.getItem(LS_THEME) || "dark"; } catch (e) { theme = "dark"; }
+      try { size = parseFloat(localStorage.getItem(LS_SIZE)) || 1; } catch (e) { size = 1; }
+      applyTheme(theme);
+      $("size-range").value = size;
+
+      var historyEl = $("history");
+      var liveEl = $("live");
+      var liveWrap = $("live-wrap");
+      var history = [];
+
+      function render() {
+        // історія
+        historyEl.innerHTML = "";
+        for (var i = 0; i < history.length; i++) {
+          var d = document.createElement("div");
+          d.className = "line";
+          d.textContent = history[i];
+          historyEl.appendChild(d);
+        }
+        historyEl.scrollTop = historyEl.scrollHeight;
+        fitLive();
+      }
+
+      function fitLive() {
+        var text = liveEl.textContent;
+        if (!text) { liveEl.style.fontSize = ""; return; }
+        var scale = parseFloat($("size-range").value) || 1;
+        var max = Math.floor(liveWrap.clientHeight * 0.9 * scale);
+        var min = 18;
+        // бінарний пошук найбільшого розміру, що вміщається
+        var lo = min, hi = Math.max(min, max), best = min;
+        for (var step = 0; step < 18 && lo <= hi; step++) {
+          var mid = Math.floor((lo + hi) / 2);
+          liveEl.style.fontSize = mid + "px";
+          if (liveEl.scrollHeight <= liveWrap.clientHeight && liveEl.scrollWidth <= liveWrap.clientWidth) {
+            best = mid; lo = mid + 1;
+          } else {
+            hi = mid - 1;
+          }
+        }
+        liveEl.style.fontSize = best + "px";
+      }
+
+      function setLive(text) {
+        if (text && text.length) {
+          liveEl.classList.remove("placeholder");
+          liveEl.textContent = text;
+        } else {
+          liveEl.classList.add("placeholder");
+          liveEl.textContent = "Очікую текст…";
+        }
+        fitLive();
+      }
+
+      function pushHistory(text) {
+        text = (text || "").replace(/\n+$/, "");
+        if (!text.trim().length) return;
+        history.push(text);
+        while (history.length > HISTORY_LIMIT) history.shift();
+        render();
+      }
+
+      var qrMinimized = false;
+
+      connect(room, function (raw) {
+        var msg = decode(raw);
+        if (msg.type === "commit") {
+          pushHistory(msg.text);
+          setLive("");
+        } else {
+          setLive(msg.text || "");
+        }
+        // згорнути QR після першого реального тексту
+        if (!qrMinimized && msg.text && msg.text.trim().length) {
+          $("qr-box").classList.add("minimized");
+          qrMinimized = true;
+        }
+      }, $("status-display"));
+
+      // ---- QR ----
+      var senderUrl = location.origin + location.pathname + "?role=sender#room=" + room;
+      $("qr-link").textContent = senderUrl;
+      try {
+        if (typeof QRCode !== "undefined") {
+          new QRCode($("qr"), { text: senderUrl, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+        } else {
+          $("qr").textContent = "QR недоступний — відкрийте посилання нижче вручну.";
+        }
+      } catch (e) {
+        $("qr").textContent = "QR недоступний — відкрийте посилання нижче вручну.";
+      }
+
+      $("qr-toggle").addEventListener("click", function () {
+        $("qr-box").classList.add("minimized");
+        qrMinimized = true;
+      });
+      $("show-qr").addEventListener("click", function () {
+        $("qr-box").classList.remove("minimized");
+        qrMinimized = false;
+        $("settings").classList.remove("open");
+      });
+
+      // ---- Налаштування ----
+      $("gear").addEventListener("click", function () { $("settings").classList.toggle("open"); });
+      $("size-range").addEventListener("input", function () {
+        try { localStorage.setItem(LS_SIZE, $("size-range").value); } catch (e) {}
+        fitLive();
+      });
+      $("theme-dark").addEventListener("click", function () { applyTheme("dark"); });
+      $("theme-light").addEventListener("click", function () { applyTheme("light"); });
+
+      // ---- Банер автоблокування ----
+      var dismissed;
+      try { dismissed = localStorage.getItem(LS_WAKE); } catch (e) { dismissed = null; }
+      if (!dismissed) $("wake-hint").classList.add("show");
+      $("wake-ok").addEventListener("click", function () {
+        $("wake-hint").classList.remove("show");
+        try { localStorage.setItem(LS_WAKE, "1"); } catch (e) {}
+      });
+
+      window.addEventListener("resize", fitLive);
+      window.addEventListener("orientationchange", function () { setTimeout(fitLive, 300); });
+
+      render();
+    }
+
+    function applyTheme(theme) {
+      if (theme === "light") document.body.classList.add("theme-light");
+      else document.body.classList.remove("theme-light");
+      try { localStorage.setItem(LS_THEME, theme); } catch (e) {}
+      var dk = $("theme-dark"), lt = $("theme-light");
+      if (dk && lt) {
+        if (theme === "light") { lt.classList.remove("off"); dk.classList.add("off"); }
+        else { dk.classList.remove("off"); lt.classList.add("off"); }
+      }
+    }
+
+    // ================= SENDER =================
+    function initSender() {
+      show("screen-sender");
+      document.body.classList.remove("theme-light"); // sender завжди темний
+
+      var room = resolveRoom();
+      if (!room) {
+        $("input").value = "";
+        $("input").placeholder = "Немає кімнати. Відскануйте QR з дисплея.";
+        $("input").disabled = true;
+        setStatus($("status-sender"), "err", "немає кімнати");
+        return;
+      }
+      saveRoom(room);
+
+      var conn = connect(room, null, $("status-sender"));
+      var input = $("input");
+
+      function publish(type, text, retain) {
+        if (!conn || !conn.client) return;
+        conn.client.publish(conn.topic, encode(type, text), { retain: !!retain, qos: 0 });
+      }
+
+      // debounce live-публікації
+      var timer = null;
+      function scheduleLive() {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(function () {
+          publish("live", input.value, true);
+        }, DEBOUNCE_MS);
+      }
+
+      input.addEventListener("input", scheduleLive);
+
+      // Enter (без Shift) — зафіксувати рядок в історію дисплея
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          var line = input.value;
+          if (timer) { clearTimeout(timer); timer = null; }
+          if (line.trim().length) publish("commit", line, false);
+          input.value = "";
+          publish("live", "", true); // очистити retained live
+        }
+      });
+
+      $("clear-btn").addEventListener("click", function () {
+        input.value = "";
+        if (timer) { clearTimeout(timer); timer = null; }
+        publish("live", "", true);
+        input.focus();
+      });
+
+      // фокус на полі для виклику клавіатури
+      setTimeout(function () { input.focus(); }, 300);
+    }
+
+    // ================= СТАРТ =================
+    function boot() {
+      var role = getQueryParam("role");
+      if (role === "display") { initDisplay(); return; }
+      if (role === "sender") { initSender(); return; }
+
+      // стартовий екран
+      show("screen-start");
+      $("btn-display").addEventListener("click", function () {
+        // не чіпаємо URL role, щоб refresh не плутав; просто запускаємо
+        initDisplay();
+      });
+      $("btn-sender").addEventListener("click", function () {
+        initSender();
+      });
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", boot);
+    } else {
+      boot();
+    }
+  })();
+  </script>
+</body>
+</html>
