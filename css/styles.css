@@ -312,6 +312,13 @@ html, body {
   white-space: nowrap;
   max-width: none;
 }
+/* Винести live-текст на власний композитний шар GPU: transform-анімація суфлера/
+   бігучки тоді не викликає repaint/reflow тексту — рух плавний навіть на високій швидкості. */
+#live-wrap.mode-tele #live,
+#live-wrap.mode-marquee #live {
+  will-change: transform;
+  backface-visibility: hidden;
+}
 
 /* Банер автоблокування */
 #wake-hint {

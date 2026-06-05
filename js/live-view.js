@@ -43,6 +43,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   let pos = 0;       // поточне зміщення (px) для tele/marquee
   let lastTs = 0;
   let buffer = "";   // накопичений текст для tele/marquee
+  let minPos = 0;    // кешована нижня межа зсуву; оновлюється ЛИШЕ при зміні контенту/розміру
 
   function isMotion() { return mode === MODE_TELE || mode === MODE_MARQUEE; }
 
@@ -62,23 +63,40 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     liveEl.style.fontSize = scrollFontPx(wrapEl, getSize()) + "px";
   }
 
+  // Виміряти межу зсуву. ЄДИНЕ місце, де читаємо layout (scrollHeight/scrollWidth) —
+  // викликається лише при зміні контенту/шрифту/розміру, НЕ щокадрово.
+  function measure() {
+    if (mode === MODE_MARQUEE) {
+      minPos = Math.min(0, wrapEl.clientWidth - liveEl.scrollWidth);
+    } else if (mode === MODE_TELE) {
+      minPos = Math.min(0, wrapEl.clientHeight - liveEl.scrollHeight);
+    } else {
+      minPos = 0;
+    }
+  }
+
+  // Запис лише transform (translate3d → композитний шар GPU, без repaint/reflow).
+  function writeTransform() {
+    liveEl.style.transform = (mode === MODE_MARQUEE)
+      ? "translate3d(" + pos + "px,0,0)"
+      : "translate3d(0," + pos + "px,0)";
+  }
+
   // Один крок анімації: рух уверх (tele) / уліво (marquee) з клемпом у кінці.
-  // Дострибнувши до кінця, текст НЕ перезапускається — лишається видимим хвіст,
-  // доки appendLine() не подовжить контент і не дасть куди рухатися далі.
+  // У циклі НЕ читаємо layout — лише пишемо transform. Дійшовши до кінця (minPos),
+  // зупиняємось до появи нового тексту; appendLine() перезапустить рух.
   function tick(ts) {
     if (!lastTs) lastTs = ts;
     const dt = (ts - lastTs) / 1000;
     lastTs = ts;
     pos -= pxPerSec(mode, speed) * dt;
-    if (mode === MODE_MARQUEE) {
-      const minPos = Math.min(0, wrapEl.clientWidth - liveEl.scrollWidth);
-      if (pos < minPos) pos = minPos;
-      liveEl.style.transform = "translateX(" + pos + "px)";
-    } else {
-      const minPos = Math.min(0, wrapEl.clientHeight - liveEl.scrollHeight);
-      if (pos < minPos) pos = minPos;
-      liveEl.style.transform = "translateY(" + pos + "px)";
+    if (pos <= minPos) {
+      pos = minPos;
+      writeTransform();
+      rafId = null; lastTs = 0; // догнали кінець — спимо, нуль навантаження
+      return;
     }
+    writeTransform();
     rafId = requestAnimationFrame(tick);
   }
 
@@ -111,6 +129,8 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       liveEl.textContent = buffer;
       pos = 0;
       applyMotionFont();
+      measure();
+      writeTransform();
       startLoop();
     }
   }
@@ -152,6 +172,8 @@ export function createLiveView(liveEl, wrapEl, getSize) {
         pos += (before - after);
         buffer = trimmed;
       }
+      measure();
+      if (pos < minPos) pos = minPos; // обрізання могло вкоротити контент
       if (!rafId) startLoop();
     },
 
@@ -174,6 +196,9 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     refresh() {
       if (isMotion()) {
         applyMotionFont();
+        measure();
+        if (pos < minPos) pos = minPos;
+        writeTransform();
         if (!rafId) startLoop();
       } else {
         render();
