@@ -1,0 +1,220 @@
+:root {
+  --bg: #000;
+  --fg: #fff;
+  --muted: #888;      /* службовий текст (статус, підказки) */
+  --history: #c9c9c9; /* історія — навмисно контрастніше за muted */
+  --accent: #4da3ff;
+  --panel: #1c1c1e;
+  --glow: rgba(77, 163, 255, 0.16); /* субтильне світіння за live-текстом */
+  --ok: #34c759;
+  --warn: #ff9f0a;
+  --err: #ff453a;
+}
+/* Світла тема для Display */
+body.theme-light {
+  --bg: #fff;
+  --fg: #000;
+  --muted: #666;
+  --history: #3a3a3a;
+  --panel: #f0f0f0;
+  --glow: rgba(77, 163, 255, 0.12);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0; height: 100%; width: 100%;
+  background: var(--bg); color: var(--fg);
+  /* Andika — шрифт SIL для високої читабельності (повна кирилиця); */
+  /* системний sans-serif як fallback, поки шрифт вантажиться. */
+  font-family: "Andika", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+.screen { display: none; height: 100%; width: 100%; }
+.screen.active { display: flex; }
+
+/* ---------- Стартовий екран ---------- */
+#screen-start {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+  text-align: center;
+}
+#screen-start h1 { font-size: 9vw; margin: 0; }
+#screen-start p { color: var(--muted); font-size: 4.5vw; max-width: 600px; margin: 0; }
+.start-btn {
+  width: 100%; max-width: 480px;
+  padding: 28px 20px;
+  font-size: 6vw;
+  border: none; border-radius: 18px;
+  background: var(--accent); color: #fff;
+  cursor: pointer;
+}
+.start-btn.secondary { background: var(--panel); color: var(--fg); }
+.privacy-note { font-size: 3.4vw; color: var(--muted); max-width: 480px; }
+
+/* ---------- Спільне: статус з'єднання ---------- */
+.status {
+  position: fixed; top: env(safe-area-inset-top, 8px); left: 8px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--muted);
+  background: rgba(127,127,127,0.12);
+  padding: 4px 10px; border-radius: 12px;
+  z-index: 50; pointer-events: none;
+}
+.status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warn); }
+.status.is-connected .dot { background: var(--ok); }
+.status.is-error .dot { background: var(--err); }
+
+/* ---------- Display ---------- */
+#screen-display { flex-direction: column; position: relative; }
+#history {
+  flex: 0 1 auto;
+  max-height: 38%;
+  overflow-y: auto;
+  padding: 10px 24px 0;
+  -webkit-overflow-scrolling: touch;
+}
+#history .line {
+  font-size: clamp(20px, 4vh, 48px);
+  line-height: 1.2;
+  color: var(--history);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 6px 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+/* Початковий стан щойно доданого рядка — анімується до видимого. */
+#history .line.line-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+#live-wrap {
+  flex: 1 1 auto;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px 24px calc(16px + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+  min-height: 0;
+}
+/* Субтильне світіння за текстом — додає глибини, не торкаючись контрасту. */
+#live-wrap::before {
+  content: "";
+  position: absolute; left: 50%; top: 50%;
+  width: 85%; height: 60%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center, var(--glow) 0%, transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+#live {
+  position: relative;
+  z-index: 1;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-width: 100%;
+}
+#live.placeholder { color: var(--muted); font-weight: 400; }
+
+/* Куток налаштувань */
+#gear {
+  position: fixed; top: env(safe-area-inset-top, 8px); right: 8px;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(127,127,127,0.18); color: var(--fg);
+  border: none; font-size: 20px; line-height: 38px; text-align: center;
+  opacity: 0.35; cursor: pointer; z-index: 60;
+}
+#gear:active { opacity: 1; }
+#settings {
+  position: fixed; top: 52px; right: 8px;
+  background: var(--panel); color: var(--fg);
+  border-radius: 14px; padding: 16px; z-index: 60;
+  display: none; width: 260px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+}
+#settings.open { display: block; }
+#settings label { display: block; font-size: 14px; margin: 10px 0 6px; }
+#settings input[type=range] { width: 100%; }
+#settings .row { display: flex; gap: 8px; }
+#settings button {
+  flex: 1; padding: 10px; border: 2px solid var(--accent); border-radius: 10px;
+  background: var(--accent); color: #fff; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+/* Неактивний стан: явно «прибраний» — без заливки, приглушений. */
+#settings button.off {
+  background: transparent; border-color: rgba(127,127,127,0.4);
+  color: var(--muted); font-weight: 400; opacity: 0.8;
+}
+
+/* QR / парування */
+#qr-box {
+  position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  background: #fff; color: #000;
+  border-radius: 16px; padding: 16px;
+  text-align: center; z-index: 55;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  max-width: 90vw;
+}
+#qr-box.minimized { padding: 8px 12px; }
+#qr-box.minimized #qr, #qr-box.minimized .qr-hint, #qr-box.minimized #qr-link { display: none; }
+#qr { display: inline-block; margin: 0 auto; }
+#qr img, #qr canvas { display: block; }
+.qr-hint { font-size: 14px; margin-top: 10px; color: #333; }
+#qr-link { font-size: 11px; color: #555; word-break: break-all; margin-top: 8px; max-width: 240px; }
+#qr-toggle {
+  border: none; background: var(--accent); color: #fff;
+  border-radius: 10px; padding: 8px 14px; font-size: 14px; cursor: pointer;
+  margin-top: 10px;
+}
+
+/* Банер автоблокування */
+#wake-hint {
+  position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  background: var(--panel); color: var(--fg);
+  border-radius: 12px; padding: 12px 14px; font-size: 14px; z-index: 70;
+  display: none; align-items: center; gap: 12px;
+}
+#wake-hint.show { display: flex; }
+#wake-hint button { border: none; background: var(--accent); color: #fff; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+
+/* ---------- Sender ---------- */
+#screen-sender { flex-direction: column; padding: 0; }
+#sender-head {
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
+  display: flex; justify-content: flex-end;
+}
+#input {
+  flex: 1 1 auto;
+  width: 100%;
+  border: none; outline: none; resize: none;
+  background: var(--bg); color: var(--fg);
+  font-size: 7vw; line-height: 1.3;
+  padding: 12px 16px;
+  font-family: inherit;
+}
+#sender-foot {
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  display: flex; gap: 10px;
+}
+#clear-btn {
+  flex: 1; padding: 18px; font-size: 5vw;
+  border: none; border-radius: 14px;
+  background: var(--panel); color: var(--fg); cursor: pointer;
+}
+.hidden { display: none !important; }
+
+/* Поважати системне налаштування зменшеного руху. */
+@media (prefers-reduced-motion: reduce) {
+  #history .line { transition: none; }
+  #history .line.line-enter { opacity: 1; transform: none; }
+  #settings button { transition: none; }
+}

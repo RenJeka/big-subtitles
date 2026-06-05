@@ -1,0 +1,5 @@
+# Тестові артефакти Playwright
+.playwright-mcp/
+
+# Скриншоти прев'ю
+display-*.png

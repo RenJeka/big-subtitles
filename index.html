@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>ВеликіСлова</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Andika:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- Стартовий екран -->
+  <section id="screen-start" class="screen">
+    <h1>ВеликіСлова</h1>
+    <p>Пишіть на телефоні — текст з'являється великим шрифтом на іншому екрані в реальному часі.</p>
+    <button class="start-btn" id="btn-display">📺 Я — Дисплей (iPad)</button>
+    <button class="start-btn secondary" id="btn-sender">⌨️ Я — пишу (телефон)</button>
+    <p class="privacy-note">Дані ніде не зберігаються. Брокер публічний — не передавайте чутливу інформацію.</p>
+  </section>
+
+  <!-- Display -->
+  <section id="screen-display" class="screen">
+    <div class="status" id="status-display"><span class="dot"></span><span class="txt">з'єднання…</span></div>
+    <button id="gear" title="Налаштування">⚙</button>
+    <div id="settings">
+      <label>Розмір тексту</label>
+      <input type="range" id="size-range" min="0.35" max="1" step="0.05" value="1">
+      <label>Тема</label>
+      <div class="row">
+        <button id="theme-dark">Темна</button>
+        <button id="theme-light" class="off">Світла</button>
+      </div>
+      <label>Парування</label>
+      <div class="row">
+        <button id="show-qr">Показати QR</button>
+      </div>
+    </div>
+
+    <div id="history"></div>
+    <div id="live-wrap"><div id="live" class="placeholder">Очікую текст…</div></div>
+
+    <div id="qr-box">
+      <div id="qr"></div>
+      <div class="qr-hint">Наведіть камеру телефона на цей код</div>
+      <div id="qr-link"></div>
+      <button id="qr-toggle">Сховати</button>
+    </div>
+
+    <div id="wake-hint">
+      <span>Щоб екран не гас: Налаштування → Дисплей → Автоблокування → Ніколи.</span>
+      <button id="wake-ok">Гаразд</button>
+    </div>
+  </section>
+
+  <!-- Sender -->
+  <section id="screen-sender" class="screen">
+    <div class="status" id="status-sender"><span class="dot"></span><span class="txt">з'єднання…</span></div>
+    <div id="sender-head"></div>
+    <textarea id="input" placeholder="Пишіть тут…  (Enter — новий рядок на дисплеї)" autocapitalize="sentences" autocomplete="off" autocorrect="on" lang="uk"></textarea>
+    <div id="sender-foot">
+      <button id="clear-btn">Очистити</button>
+    </div>
+  </section>
+
+  <!-- Зовнішні бібліотеки з CDN (класичні скрипти, дають глобали mqtt / QRCode) -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+
+  <!-- Застосунок: ES-модулі. app.js сам підтягує залежності через import. -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
