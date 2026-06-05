@@ -1,0 +1,36 @@
+/* qr-modal.css — спільний модал парування з QR-кодом (#qr-modal). */
+
+#qr-modal {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.72);
+  z-index: 200;
+  align-items: center; justify-content: center;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+#qr-modal.open { display: flex; }
+#qr-modal-box {
+  background: #fff; color: #000;
+  border-radius: 20px; padding: 24px 20px;
+  text-align: center;
+  max-width: min(320px, 90vw);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  animation: modal-in 0.2s ease;
+}
+#qr { display: inline-block; margin: 0 auto; }
+#qr img, #qr canvas { display: block; }
+.qr-hint { font-size: 14px; margin-top: 12px; color: #444; }
+#qr-link { font-size: 11px; color: #666; word-break: break-all; margin-top: 8px; max-width: 260px; }
+#qr-modal-close {
+  display: block; width: 100%; margin-top: 16px;
+  border: none; background: #111; color: #fff;
+  border-radius: 12px; padding: 12px; font-size: 15px; cursor: pointer;
+  font-family: inherit;
+}
+#qr-modal-close:active { background: #333; }
+
+/* Поважати системне налаштування зменшеного руху. */
+@media (prefers-reduced-motion: reduce) {
+  #qr-modal-box { animation: none; }
+}

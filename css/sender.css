@@ -1,0 +1,55 @@
+/* sender.css — режим Sender (#screen-sender): поле вводу та кнопки дій. */
+
+#screen-sender { flex-direction: column; padding: 16px; }
+/* sender-gear і sender-settings успадковують загальні .toolbar / .toolbar-btn / .settings-panel */
+
+/* Обгортка поля вводу: заповнює екран під тулбаром. */
+.sender-input-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-top: 60px;
+}
+
+#input {
+  flex: 1;
+  margin-bottom: 1rem;
+  resize: none;
+  font-size: clamp(1.2rem, 5vw, 2rem);
+  line-height: 1.4;
+  font-family: inherit;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+.btn-clear, .btn-send {
+  flex: 1;
+  padding: 24px 16px !important;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  border-radius: 16px !important;
+  border: none !important;
+  color: #fff !important;
+  transition: filter 0.15s ease, transform 0.1s ease !important;
+}
+.btn-clear:active, .btn-send:active {
+  transform: scale(0.96);
+}
+.btn-clear {
+  background-color: var(--err) !important;
+}
+.btn-clear:hover {
+  filter: brightness(1.1);
+}
+.btn-send {
+  background-color: var(--ok) !important;
+}
+.btn-send:hover {
+  filter: brightness(1.1);
+}

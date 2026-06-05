@@ -1,0 +1,93 @@
+/* components.css — спільні елементи інтерфейсу Display і Sender:
+   індикатор з'єднання, тулбар кнопок, панель налаштувань, степер. */
+
+/* ---------- Статус з'єднання ---------- */
+.status {
+  position: fixed; top: env(safe-area-inset-top, 8px); left: 8px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--muted);
+  background: rgba(127,127,127,0.12);
+  padding: 4px 10px; border-radius: 12px;
+  z-index: 50; pointer-events: none;
+}
+.status .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--warn); }
+.status.is-connected .dot { background: var(--ok); }
+.status.is-error .dot { background: var(--err); }
+
+/* ---------- Тулбар кнопок (історія / шестірня) ---------- */
+.toolbar {
+  position: fixed; top: env(safe-area-inset-top, 8px); right: 8px;
+  display: flex; gap: 8px;
+  z-index: 60;
+}
+.toolbar-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: rgba(127,127,127,0.18); color: var(--fg);
+  border: none; font-size: 20px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+  opacity: 0.35; cursor: pointer;
+}
+.toolbar-btn:active { opacity: 1; }
+
+/* ---------- Панель налаштувань ---------- */
+.settings-panel {
+  position: fixed; top: 52px; right: 8px;
+  background: var(--panel); color: var(--fg);
+  border-radius: 14px; padding: 16px; z-index: 60;
+  display: none; width: 260px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.settings-panel.open { display: block; }
+.settings-panel label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 6px; font-weight: 700; letter-spacing: 0.02em; }
+.settings-panel label:first-child { margin-top: 0; }
+.settings-panel input[type=range] { width: 100%; accent-color: var(--accent); }
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.settings-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+  padding: 12px 4px !important;
+  font-size: 0.9rem !important;
+  line-height: 1.2 !important;
+  white-space: normal;
+  height: auto;
+  min-height: 80px;
+}
+.settings-grid button svg { margin: 0 !important; }
+
+/* Степер «➖ значення ➕» — кнопки по краях, поточне число в центрі. */
+.stepper {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.stepper button {
+  margin: 0;
+  padding: 12px 4px !important;
+  font-size: 1.1rem !important;
+}
+.stepper-value {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--fg);
+  min-width: 3.2em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Поважати системне налаштування зменшеного руху. */
+@media (prefers-reduced-motion: reduce) {
+  .settings-panel button { transition: none; }
+}

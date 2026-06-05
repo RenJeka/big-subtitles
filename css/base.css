@@ -1,0 +1,53 @@
+/* base.css — дизайн-токени, глобальний reset, каркас екранів, утиліти.
+   Підключається першим: визначає CSS-змінні, на які спираються решта партіалів. */
+
+/* ---------- Дизайн-токени (тема за замовчуванням — темна) ---------- */
+:root {
+  --bg: #000;
+  --fg: #fff;
+  --muted: #888;      /* службовий текст (статус, підказки) */
+  --history: #c9c9c9; /* історія — навмисно контрастніше за muted */
+  --accent: #4da3ff;
+  --panel: #1c1c1e;
+  --glow: rgba(77, 163, 255, 0.16); /* субтильне світіння за live-текстом */
+  --ok: #34c759;
+  --warn: #ff9f0a;
+  --err: #ff453a;
+}
+/* Світла тема */
+[data-theme="light"] {
+  --bg: #fff;
+  --fg: #000;
+  --muted: #666;
+  --history: #3a3a3a;
+  --panel: #f0f0f0;
+  --glow: rgba(77, 163, 255, 0.12);
+}
+
+/* ---------- Reset / базова типографіка ---------- */
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body {
+  margin: 0; padding: 0; height: 100%; width: 100%;
+  background: var(--bg); color: var(--fg);
+  /* Andika — шрифт SIL для високої читабельності (повна кирилиця); */
+  /* системний sans-serif як fallback, поки шрифт вантажиться. */
+  font-family: "Andika", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ---------- Каркас екранів ---------- */
+/* Лише один екран активний; режим вмикає клас .active (utils.show). */
+.screen { display: none; height: 100%; width: 100%; }
+.screen.active { display: flex; }
+
+/* ---------- Спільна анімація появи (модалка/панель історії) ---------- */
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ---------- Утиліти ---------- */
+.hidden { display: none !important; }
+/* Емодзі-іконка в кнопках налаштувань (замість inline font-size). */
+.btn-emoji { font-size: 1.5rem; }
