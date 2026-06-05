@@ -2,7 +2,8 @@
 import {
   LS_THEME, LS_SIZE, LS_WAKE, LS_MODE, LS_SPEED,
   DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED,
-  SPEED_MIN, SPEED_MAX, MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE
+  SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP,
+  MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE
 } from "./config.js";
 import * as store from "./store.js";
 import { $ } from "./utils.js";
@@ -89,15 +90,15 @@ export function init(hooks = {}) {
   }
 
   function updateSize(delta) {
-    currentSize += delta;
-    if (currentSize > 1) currentSize = 1;
-    if (currentSize < 0.35) currentSize = 0.35;
+    currentSize = Math.round((currentSize + delta) * 100) / 100;
+    if (currentSize > SIZE_MAX) currentSize = SIZE_MAX;
+    if (currentSize < SIZE_MIN) currentSize = SIZE_MIN;
     store.set(LS_SIZE, String(currentSize));
     if (hooks.onSizeChange) hooks.onSizeChange();
   }
 
-  $("size-minus").addEventListener("click", () => updateSize(-0.05));
-  $("size-plus").addEventListener("click", () => updateSize(0.05));
+  $("size-minus").addEventListener("click", () => updateSize(-SIZE_STEP));
+  $("size-plus").addEventListener("click", () => updateSize(SIZE_STEP));
 
   // Режим показу
   function setMode(mode) {

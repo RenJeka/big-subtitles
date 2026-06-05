@@ -93,6 +93,20 @@ export const MARQUEE_PX_STEP = 24;
 // fontPx = max(FIT_MIN_FONT_PX, round(size * SCROLL_FONT_RATIO * min(wrapW, wrapH)))
 export const SCROLL_FONT_RATIO = 0.18;
 
+// Роздільник між накопиченими рядками у режимі бігучої строки (одна лінія).
+export const MARQUEE_SEP = "   •   ";
+// Обмеження накопиченого буфера (tele/marquee), щоб він не зростав безкінечно.
+// Зайве обрізається з початку по межі рядка/роздільника — видима частина не смикається.
+export const ACCUMULATE_MAX_CHARS = 4000;
+
+// ===================== Розмір тексту Display =====================
+
+// Масштаб тексту (0..N): межі та крок кнопок ➖/➕.
+// SIZE_MAX > 1 — користувач може робити текст помітно більшим за «вписаний» максимум.
+export const SIZE_MIN = 0.35;
+export const SIZE_MAX = 3;
+export const SIZE_STEP = 0.05;
+
 // ===================== QR-код =====================
 
 export const QR_SIZE = 220;  // ширина й висота QR-коду (px)

@@ -2,9 +2,9 @@
 // Тема/розмір/банер делеговано в settings, автомасштаб — у fit-text.
 import {
   HISTORY_LIMIT, ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
-  TEXT_PLACEHOLDER, ROLE_DISPLAY
+  TEXT_PLACEHOLDER, ROLE_DISPLAY, MODE_TELE, MODE_MARQUEE
 } from "./config.js";
-import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal } from "./utils.js";
+import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal, bindOutsideClose } from "./utils.js";
 import { connect, decode } from "./mqtt-client.js";
 import { makeKeyB64, initKey, decrypt } from "./crypto.js";
 import { createLiveView } from "./live-view.js";
@@ -34,8 +34,15 @@ export function init() {
   const liveWrap = $("live-wrap");
 
   const liveView = createLiveView(liveEl, liveWrap, settings.getSize);
+  let lastText = ""; // останній live-текст (для fit/scroll; tele/marquee накопичує сам)
+
+  function isMotionMode() {
+    const m = settings.getMode();
+    return m === MODE_TELE || m === MODE_MARQUEE;
+  }
 
   function setLive(text) {
+    lastText = text || "";
     if (text && text.length) {
       liveEl.classList.remove("placeholder");
       liveView.setText(text);
@@ -49,6 +56,8 @@ export function init() {
   function syncView() {
     liveView.setMode(settings.getMode());
     liveView.setSpeed(settings.getSpeed());
+    // У fit/scroll відновити останній live-текст; tele/marquee стартує з порожнього потоку.
+    if (!isMotionMode()) setLive(lastText);
   }
 
   // Оновлює видимість заглушки «Поки що порожньо».
@@ -99,10 +108,15 @@ export function init() {
         syncView();
         liveView.refresh();
       } else if (msg.type === MSG_TYPE_COMMIT) {
-        appendLine(msg.text);
-        setLive("");
+        appendLine(msg.text); // запис в історію лишається в усіх режимах
+        if (isMotionMode()) {
+          liveView.appendLine(msg.text); // суфлер/бігучка: додати у безперервний потік
+        } else {
+          setLive("");
+        }
       } else {
-        setLive(msg.text || "");
+        // live-текст (набір) — лише для fit/scroll; у режимах руху ігноруємо.
+        if (!isMotionMode()) setLive(msg.text || "");
       }
     });
   }, $("status-display"));
@@ -117,6 +131,10 @@ export function init() {
     onSpeedChange: () => { liveView.setSpeed(settings.getSpeed()); },
     onShowQr: openQrModal
   });
+
+  // Закривати панелі кліком поза ними (кнопки-перемикачі ігноруємо).
+  bindOutsideClose($("settings"), $("gear"), $("history-btn"));
+  bindOutsideClose($("history-panel"), $("history-btn"), $("gear"));
 
   window.addEventListener("resize", () => liveView.refresh());
   window.addEventListener("orientationchange", () => setTimeout(() => liveView.refresh(), ORIENTATION_DELAY_MS));

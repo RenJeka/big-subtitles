@@ -6,10 +6,11 @@ import {
   MSG_TYPE_LIVE, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
   DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED, HISTORY_LIMIT,
   LS_SENDER_THEME, LS_PUSH_THEME, LS_SIZE, LS_MODE, LS_SPEED,
-  SPEED_MIN, SPEED_MAX, MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
+  SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP,
+  MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   ROLE_SENDER
 } from "./config.js";
-import { $, show, resolveRoom, saveRoom, resolveKey, saveKey, setStatus, initQrModal, openQrModal } from "./utils.js";
+import { $, show, resolveRoom, saveRoom, resolveKey, saveKey, setStatus, initQrModal, openQrModal, bindOutsideClose } from "./utils.js";
 import { connect, encode } from "./mqtt-client.js";
 import { initKey, encrypt } from "./crypto.js";
 import * as store from "./store.js";
@@ -135,17 +136,21 @@ export function init() {
     $("sender-history-panel").classList.toggle("open");
   });
 
+  // Закривати панелі кліком поза ними (кнопки-перемикачі ігноруємо).
+  bindOutsideClose($("sender-settings"), $("sender-gear"), $("sender-history-btn"));
+  bindOutsideClose($("sender-history-panel"), $("sender-history-btn"), $("sender-gear"));
+
   // Розмір тексту на Display
   function updateSenderSize(delta) {
-    displaySize += delta;
-    if (displaySize > 1) displaySize = 1;
-    if (displaySize < 0.35) displaySize = 0.35;
+    displaySize = Math.round((displaySize + delta) * 100) / 100;
+    if (displaySize > SIZE_MAX) displaySize = SIZE_MAX;
+    if (displaySize < SIZE_MIN) displaySize = SIZE_MIN;
     store.set(LS_SIZE, String(displaySize));
     publishSettings();
   }
 
-  $("sender-size-minus").addEventListener("click", () => updateSenderSize(-0.05));
-  $("sender-size-plus").addEventListener("click", () => updateSenderSize(0.05));
+  $("sender-size-minus").addEventListener("click", () => updateSenderSize(-SIZE_STEP));
+  $("sender-size-plus").addEventListener("click", () => updateSenderSize(SIZE_STEP));
 
   // Режим показу на Display
   function setDisplayMode(mode) {
@@ -241,7 +246,13 @@ export function init() {
   const input = $("input");
   let timer = null;
 
+  function isMotionMode() {
+    return displayMode === MODE_TELE || displayMode === MODE_MARQUEE;
+  }
+
   function scheduleLive() {
+    // Суфлер/бігучка: текст надсилається лише по кнопці/Enter — без live під час набору.
+    if (isMotionMode()) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => publish(MSG_TYPE_LIVE, input.value, true), DEBOUNCE_MS);
   }
@@ -276,6 +287,23 @@ export function init() {
     publish(MSG_TYPE_LIVE, "", true);
     input.focus();
   });
+
+  // ===================== Висота під клавіатуру =====================
+  // Екранна клавіатура на телефоні не зменшує layout viewport → кнопки ховаються під нею.
+  // Прив'язуємо висоту екрана Sender до visualViewport, щоб кнопки лишались видимими.
+  function bindViewport() {
+    const vv = window.visualViewport;
+    if (!vv) return; // старі браузери — fallback на CSS height:100%
+    const screen = $("screen-sender");
+    const apply = () => {
+      screen.style.height = vv.height + "px";
+      screen.style.transform = "translateY(" + vv.offsetTop + "px)";
+    };
+    vv.addEventListener("resize", apply);
+    vv.addEventListener("scroll", apply);
+    apply();
+  }
+  bindViewport();
 
   // Фокус на полі для виклику клавіатури
   setTimeout(() => input.focus(), FOCUS_DELAY_MS);

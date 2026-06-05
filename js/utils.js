@@ -67,6 +67,20 @@ export function setStatus(el, state, text) {
   el.querySelector(".txt").textContent = text;
 }
 
+// Закривати панель (прибирати клас "open") за кліком поза нею.
+// ignoreEls — кнопки-перемикачі панелі: клік по них не закриває (інакше той самий
+// клік, що відкрив панель, одразу б її закрив).
+export function bindOutsideClose(panelEl, ...ignoreEls) {
+  document.addEventListener("click", (e) => {
+    if (!panelEl.classList.contains("open")) return;
+    if (panelEl.contains(e.target)) return;
+    for (let i = 0; i < ignoreEls.length; i++) {
+      if (ignoreEls[i] && ignoreEls[i].contains(e.target)) return;
+    }
+    panelEl.classList.remove("open");
+  });
+}
+
 // ===================== QR-модал =====================
 // Лінива ініціалізація: QR генерується лише раз (при першому відкритті).
 let _qrReady = false;
