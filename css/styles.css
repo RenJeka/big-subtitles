@@ -39,22 +39,106 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
   padding: 24px;
+  overflow-y: auto;
+}
+
+.welcome-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
+  width: 100%;
+  max-width: 600px;
+  gap: 32px;
+  margin: auto;
 }
-#screen-start h1 { font-size: 9vw; margin: 0; }
-#screen-start p { color: var(--muted); font-size: 4.5vw; max-width: 600px; margin: 0; }
+
+.welcome-title {
+  font-size: clamp(2.5rem, 8vw, 4rem);
+  margin: 0;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.welcome-subtitle {
+  color: var(--muted);
+  font-size: clamp(1rem, 4.5vw, 1.25rem);
+  margin: 0;
+  line-height: 1.4;
+  max-width: 480px;
+}
+
+.start-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 480px;
+}
+
 .start-btn {
-  width: 100%; max-width: 480px;
-  padding: 28px 20px;
-  font-size: 6vw;
-  border: none; border-radius: 18px;
-  background: var(--accent); color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  padding: 24px 20px;
+  font-size: clamp(1.2rem, 5vw, 1.5rem);
+  font-family: inherit;
+  font-weight: 700;
+  border: none; 
+  border-radius: 18px;
+  background: var(--accent); 
+  color: #fff;
   cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
 }
-.start-btn.secondary { background: var(--panel); color: var(--fg); }
-.privacy-note { font-size: 3.4vw; color: var(--muted); max-width: 480px; }
+
+.start-btn:active {
+  transform: scale(0.98);
+}
+
+.start-btn:hover {
+  filter: brightness(1.08);
+}
+
+.start-btn.secondary { 
+  background: var(--panel); 
+  color: var(--fg); 
+}
+
+/* Іконки підвантажуються через mask, щоб автоматично фарбуватись у колір тексту (currentColor) */
+.start-icon {
+  width: 32px;
+  height: 32px;
+  background-color: currentColor;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  flex-shrink: 0;
+}
+
+.icon-display {
+  -webkit-mask-image: url('../assets/display.svg');
+  mask-image: url('../assets/display.svg');
+}
+
+.icon-sender {
+  -webkit-mask-image: url('../assets/sender.svg');
+  mask-image: url('../assets/sender.svg');
+}
+
+.privacy-note { 
+  font-size: clamp(0.85rem, 3.5vw, 1rem); 
+  color: var(--muted); 
+  max-width: 480px; 
+  margin: 0;
+}
 
 /* ---------- Спільне: статус з'єднання ---------- */
 .status {

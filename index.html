@@ -15,11 +15,23 @@
 
   <!-- Стартовий екран -->
   <section id="screen-start" class="screen">
-    <h1>ВеликіСлова</h1>
-    <p>Пишіть на телефоні — текст з'являється великим шрифтом на іншому екрані в реальному часі.</p>
-    <button class="start-btn" id="btn-display">📺 Я — Дисплей (iPad)</button>
-    <button class="start-btn secondary" id="btn-sender">⌨️ Я — пишу (телефон)</button>
-    <p class="privacy-note">Дані ніде не зберігаються. Брокер публічний — не передавайте чутливу інформацію.</p>
+    <div class="welcome-container">
+      <h1 class="welcome-title">ВеликіСлова</h1>
+      <p class="welcome-subtitle">Пишіть на телефоні — текст з'являється великим шрифтом на іншому екрані в реальному часі.</p>
+      
+      <div class="start-actions">
+        <button class="start-btn" id="btn-display">
+          <span class="start-icon icon-display"></span>
+          <span>Я — Дисплей (iPad)</span>
+        </button>
+        <button class="start-btn secondary" id="btn-sender">
+          <span class="start-icon icon-sender"></span>
+          <span>Я — пишу (телефон)</span>
+        </button>
+      </div>
+
+      <p class="privacy-note">Дані ніде не зберігаються. Брокер публічний — не передавайте чутливу інформацію.</p>
+    </div>
   </section>
 
   <!-- Display -->
