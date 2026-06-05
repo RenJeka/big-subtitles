@@ -21,6 +21,13 @@ export const MSG_TYPE_COMMIT = "commit";
 // Налаштування: Sender надсилає Display розмір + тему (retain:true)
 export const MSG_TYPE_SETTINGS = "settings";
 
+// ===================== Присутність (presence) =====================
+// Кожна роль публікує retained-маркер у власну тему velyki/<room>/presence/<role>
+// і підписується на тему партнера. LWT/закриття вкладки очищають маркер.
+export const PRESENCE_INFIX = "/presence/";
+export const PRESENCE_ONLINE = "1";
+export const PRESENCE_OFFLINE = ""; // порожній payload очищає retained (LWT і вихід)
+
 // ===================== Ключі localStorage =====================
 
 export const LS_ROOM = "velyki.room";
@@ -76,3 +83,12 @@ export const DEFAULT_SIZE = "1";
 
 export const TEXT_PLACEHOLDER = "Очікую текст…";
 export const TEXT_QR_UNAVAILABLE = "QR недоступний — відкрийте посилання нижче вручну.";
+
+// Тексти індикатора з'єднання
+export const TEXT_STATUS_CONNECTED = "з'єднано";          // обидва пристрої на зв'язку (зелено)
+export const TEXT_STATUS_WAITING = "очікування пристрою…"; // на брокері, але пари ще немає
+export const TEXT_STATUS_RECONNECT = "перепідключення…";
+export const TEXT_STATUS_OFFLINE = "немає мережі…";
+export const TEXT_STATUS_CLOSED = "роз'єднано…";
+export const TEXT_STATUS_ERROR = "помилка з'єднання";
+export const TEXT_STATUS_NO_MQTT = "немає бібліотеки MQTT";

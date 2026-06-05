@@ -5,7 +5,8 @@ import {
   DEBOUNCE_MS, FOCUS_DELAY_MS,
   MSG_TYPE_LIVE, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
   DEFAULT_THEME, DEFAULT_SIZE,
-  LS_SENDER_THEME, LS_PUSH_THEME, LS_SIZE
+  LS_SENDER_THEME, LS_PUSH_THEME, LS_SIZE,
+  ROLE_SENDER
 } from "./config.js";
 import { $, show, resolveRoom, saveRoom, setStatus, initQrModal, openQrModal } from "./utils.js";
 import { connect, encode } from "./mqtt-client.js";
@@ -64,7 +65,7 @@ export function init() {
   initQrModal(room);
 
   // ===================== MQTT =====================
-  const conn = connect(room, null, $("status-sender"));
+  const conn = connect(room, ROLE_SENDER, null, $("status-sender"));
 
   function publishSettings() {
     if (!conn || !conn.client) return;

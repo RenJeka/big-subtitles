@@ -2,7 +2,7 @@
 // Тема/розмір/банер делеговано в settings, автомасштаб — у fit-text.
 import {
   HISTORY_LIMIT, ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
-  TEXT_PLACEHOLDER
+  TEXT_PLACEHOLDER, ROLE_DISPLAY
 } from "./config.js";
 import { $, show, resolveRoom, makeToken, saveRoom, initQrModal, openQrModal } from "./utils.js";
 import { connect, decode } from "./mqtt-client.js";
@@ -52,7 +52,7 @@ export function init() {
     fitLive();
   }
 
-  connect(room, (raw) => {
+  connect(room, ROLE_DISPLAY, (raw) => {
     const msg = decode(raw);
     if (msg.type === MSG_TYPE_SETTINGS) {
       // Sender надіслав налаштування — застосувати (Sender має пріоритет)
