@@ -1,68 +1,58 @@
 // Режим Sender (телефон): textarea з debounce-публікацією, Enter фіксує рядок.
-window.VS = window.VS || {};
+import { DEBOUNCE_MS } from "./config.js";
+import { $, show, resolveRoom, saveRoom, setStatus } from "./utils.js";
+import { connect, encode } from "./mqtt-client.js";
 
-(function (VS) {
-  "use strict";
-  var C = VS.config;
-  var U = VS.utils;
-  var M = VS.mqtt;
-  var $ = U.$;
+export function init() {
+  show("screen-sender");
+  document.body.classList.remove("theme-light"); // sender завжди темний
 
-  function init() {
-    U.show("screen-sender");
-    document.body.classList.remove("theme-light"); // sender завжди темний
+  const room = resolveRoom();
+  if (!room) {
+    $("input").value = "";
+    $("input").placeholder = "Немає кімнати. Відскануйте QR з дисплея.";
+    $("input").disabled = true;
+    setStatus($("status-sender"), "err", "немає кімнати");
+    return;
+  }
+  saveRoom(room);
 
-    var room = U.resolveRoom();
-    if (!room) {
-      $("input").value = "";
-      $("input").placeholder = "Немає кімнати. Відскануйте QR з дисплея.";
-      $("input").disabled = true;
-      U.setStatus($("status-sender"), "err", "немає кімнати");
-      return;
-    }
-    U.saveRoom(room);
+  const conn = connect(room, null, $("status-sender"));
+  const input = $("input");
 
-    var conn = M.connect(room, null, $("status-sender"));
-    var input = $("input");
-
-    function publish(type, text, retain) {
-      if (!conn || !conn.client) return;
-      conn.client.publish(conn.topic, M.encode(type, text), { retain: !!retain, qos: 0 });
-    }
-
-    // debounce live-публікації
-    var timer = null;
-    function scheduleLive() {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(function () {
-        publish("live", input.value, true);
-      }, C.DEBOUNCE_MS);
-    }
-
-    input.addEventListener("input", scheduleLive);
-
-    // Enter (без Shift) — зафіксувати рядок в історію дисплея
-    input.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        var line = input.value;
-        if (timer) { clearTimeout(timer); timer = null; }
-        if (line.trim().length) publish("commit", line, false);
-        input.value = "";
-        publish("live", "", true); // очистити retained live
-      }
-    });
-
-    $("clear-btn").addEventListener("click", function () {
-      input.value = "";
-      if (timer) { clearTimeout(timer); timer = null; }
-      publish("live", "", true);
-      input.focus();
-    });
-
-    // фокус на полі для виклику клавіатури
-    setTimeout(function () { input.focus(); }, 300);
+  function publish(type, text, retain) {
+    if (!conn || !conn.client) return;
+    conn.client.publish(conn.topic, encode(type, text), { retain: !!retain, qos: 0 });
   }
 
-  VS.sender = { init: init };
-})(window.VS);
+  // debounce live-публікації
+  let timer = null;
+  function scheduleLive() {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => publish("live", input.value, true), DEBOUNCE_MS);
+  }
+
+  input.addEventListener("input", scheduleLive);
+
+  // Enter (без Shift) — зафіксувати рядок в історію дисплея
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const line = input.value;
+      if (timer) { clearTimeout(timer); timer = null; }
+      if (line.trim().length) publish("commit", line, false);
+      input.value = "";
+      publish("live", "", true); // очистити retained live
+    }
+  });
+
+  $("clear-btn").addEventListener("click", () => {
+    input.value = "";
+    if (timer) { clearTimeout(timer); timer = null; }
+    publish("live", "", true);
+    input.focus();
+  });
+
+  // фокус на полі для виклику клавіатури
+  setTimeout(() => input.focus(), 300);
+}

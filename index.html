@@ -66,19 +66,11 @@
     </div>
   </section>
 
-  <!-- Зовнішні бібліотеки з CDN -->
+  <!-- Зовнішні бібліотеки з CDN (класичні скрипти, дають глобали mqtt / QRCode) -->
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
 
-  <!-- Модулі застосунку (порядок важливий: залежності завантажуються першими) -->
-  <script src="js/config.js"></script>
-  <script src="js/store.js"></script>
-  <script src="js/utils.js"></script>
-  <script src="js/fit-text.js"></script>
-  <script src="js/mqtt-client.js"></script>
-  <script src="js/settings.js"></script>
-  <script src="js/display.js"></script>
-  <script src="js/sender.js"></script>
-  <script src="js/app.js"></script>
+  <!-- Застосунок: ES-модулі. app.js сам підтягує залежності через import. -->
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>

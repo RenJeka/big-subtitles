@@ -1,24 +1,18 @@
 // Точка входу: визначає режим за ?role= або показує стартовий екран.
-window.VS = window.VS || {};
+// Підключається як <script type="module"> — виконується після парсингу DOM.
+import { $, show, getQueryParam } from "./utils.js";
+import * as display from "./display.js";
+import * as sender from "./sender.js";
 
-(function (VS) {
-  "use strict";
-  var U = VS.utils;
+function boot() {
+  const role = getQueryParam("role");
+  if (role === "display") { display.init(); return; }
+  if (role === "sender") { sender.init(); return; }
 
-  function boot() {
-    var role = U.getQueryParam("role");
-    if (role === "display") { VS.display.init(); return; }
-    if (role === "sender") { VS.sender.init(); return; }
+  // стартовий екран
+  show("screen-start");
+  $("btn-display").addEventListener("click", () => display.init());
+  $("btn-sender").addEventListener("click", () => sender.init());
+}
 
-    // стартовий екран
-    U.show("screen-start");
-    U.$("btn-display").addEventListener("click", function () { VS.display.init(); });
-    U.$("btn-sender").addEventListener("click", function () { VS.sender.init(); });
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
-  } else {
-    boot();
-  }
-})(window.VS);
+boot();

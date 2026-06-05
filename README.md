@@ -57,21 +57,25 @@ css/
   styles.css            # усі стилі (теми, екрани, компоненти, анімації)
 js/
   config.js             # константи: брокер, ключі localStorage, ліміти, debounce
-  store.js              # безпечна обгортка над localStorage → VS.store
-  utils.js              # хелпери DOM/URL, генерація токена, статус → VS.utils
-  fit-text.js           # автомасштаб тексту (бінарний пошук розміру) → VS.fitText
-  mqtt-client.js        # транспорт MQTT по WebSocket + протокол повідомлень → VS.mqtt
-  settings.js           # тема, розмір шрифту, шестірня, банер автоблокування → VS.settings
-  display.js            # режим Display: live-текст, історія, QR → VS.display
-  sender.js             # режим Sender: textarea, debounce, Enter-commit → VS.sender
-  app.js                # точка входу: визначає режим за ?role= → boot()
+  store.js              # безпечна обгортка над localStorage (get/set)
+  utils.js              # хелпери DOM/URL, генерація токена, статус
+  fit-text.js           # автомасштаб тексту (бінарний пошук розміру)
+  mqtt-client.js        # транспорт MQTT по WebSocket + протокол повідомлень (connect/encode/decode)
+  settings.js           # тема, розмір шрифту, шестірня, банер автоблокування
+  display.js            # режим Display: live-текст, історія, QR (init)
+  sender.js             # режим Sender: textarea, debounce, Enter-commit (init)
+  app.js                # точка входу (type=module): визначає режим за ?role= → boot()
 spec-velyki-slova-mvp.md # вихідна специфікація MVP
 ```
 
-Усі модулі спілкуються через єдиний глобальний namespace `window.VS` і підключаються
-звичайними `<script>` **у порядку залежностей** (`config → store → utils → fit-text →
-mqtt-client → settings → display → sender → app`). ES-модулі навмисно не використовуються —
-щоб лишитись сумісними з Safari 15 і працювати навіть із `file://`.
+Код організовано як **ES-модулі** (`import`/`export`): `index.html` підключає лише
+точку входу `<script type="module" src="js/app.js">`, а решта залежностей підтягуються
+через `import`. ES-модулі підтримуються Safari 11+ (отже й Safari 15); top-level await
+не використовується. CDN-бібліотеки (MQTT.js, qrcodejs) лишаються класичними скриптами
+і дають глобали `mqtt` / `QRCode`.
+
+> **Важливо:** ES-модулі **не працюють через `file://`** (CORS) — застосунок треба
+> відкривати лише через `http://localhost` або HTTPS (див. локальний запуск нижче).
 
 Шрифт — **[Andika](https://software.sil.org/andika/)** (SIL International), створений для
 високої читабельності з повною підтримкою кирилиці; підключається з Google Fonts із
@@ -90,15 +94,15 @@ Display тримає історію (останні ~10 рядків) у пам'
 ### Як розширювати
 
 - **Новий екран/режим** — додати секцію в `index.html`, створити `js/<name>.js` з
-  `VS.<name> = { init: … }`, підключити перед `app.js` і додати гілку в `boot()`.
+  `export function init() { … }`, заімпортувати його в `js/app.js` і додати гілку в `boot()`.
 - **Інший транспорт** (власний брокер чи Firebase у v2) — змінити лише `js/mqtt-client.js`,
   зберігши інтерфейс `connect / encode / decode`.
 - **Налаштування** — централізовано в `js/config.js`.
 
 ## Технічні нотатки
 
-- Приймач — **iPad Air 2 / Safari 15**: код навмисно ванільний (без бандлера, без ES-модулів,
-  без top-level await).
+- Приймач — **iPad Air 2 / Safari 15**: ванільний JS у вигляді ES-модулів (без бандлера,
+  без top-level await). Через CORS-обмеження модулів — лише `http(s)`, не `file://`.
 - Українська вводиться **системною клавіатурою** (Gboard / голос); Web Speech API не використовується.
 - CDN: [MQTT.js](https://unpkg.com/mqtt/dist/mqtt.min.js), [qrcodejs](https://github.com/davidshimjs/qrcodejs).
 
