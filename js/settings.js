@@ -1,5 +1,5 @@
 // Панель налаштувань Display: тема, розмір шрифту, шестірня, банер автоблокування.
-import { LS_THEME, LS_SIZE, LS_WAKE } from "./config.js";
+import { LS_THEME, LS_SIZE, LS_WAKE, DEFAULT_THEME, DEFAULT_SIZE } from "./config.js";
 import * as store from "./store.js";
 import { $ } from "./utils.js";
 
@@ -20,8 +20,8 @@ export function getSize() { return currentSize; }
 
 // hooks: { onSizeChange, onShowQr }
 export function init(hooks = {}) {
-  const theme = store.get(LS_THEME, "dark");
-  currentSize = parseFloat(store.get(LS_SIZE, "1")) || 1;
+  const theme = store.get(LS_THEME, DEFAULT_THEME);
+  currentSize = parseFloat(store.get(LS_SIZE, DEFAULT_SIZE)) || 1;
   applyTheme(theme);
   $("size-range").value = currentSize;
 

@@ -1,5 +1,5 @@
 // Режим Sender (телефон): textarea з debounce-публікацією, Enter фіксує рядок.
-import { DEBOUNCE_MS } from "./config.js";
+import { DEBOUNCE_MS, FOCUS_DELAY_MS, MSG_TYPE_LIVE, MSG_TYPE_COMMIT } from "./config.js";
 import { $, show, resolveRoom, saveRoom, setStatus } from "./utils.js";
 import { connect, encode } from "./mqtt-client.js";
 
@@ -29,7 +29,7 @@ export function init() {
   let timer = null;
   function scheduleLive() {
     if (timer) clearTimeout(timer);
-    timer = setTimeout(() => publish("live", input.value, true), DEBOUNCE_MS);
+    timer = setTimeout(() => publish(MSG_TYPE_LIVE, input.value, true), DEBOUNCE_MS);
   }
 
   input.addEventListener("input", scheduleLive);
@@ -40,19 +40,20 @@ export function init() {
       e.preventDefault();
       const line = input.value;
       if (timer) { clearTimeout(timer); timer = null; }
-      if (line.trim().length) publish("commit", line, false);
+      if (line.trim().length) publish(MSG_TYPE_COMMIT, line, false);
       input.value = "";
-      publish("live", "", true); // очистити retained live
+      publish(MSG_TYPE_LIVE, "", true); // очистити retained live
     }
   });
 
   $("clear-btn").addEventListener("click", () => {
     input.value = "";
     if (timer) { clearTimeout(timer); timer = null; }
-    publish("live", "", true);
+    publish(MSG_TYPE_LIVE, "", true);
     input.focus();
   });
 
   // фокус на полі для виклику клавіатури
-  setTimeout(() => input.focus(), 300);
+  setTimeout(() => input.focus(), FOCUS_DELAY_MS);
 }
+

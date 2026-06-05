@@ -1,7 +1,11 @@
 // Режим Display (iPad): великий автомасштабований live-текст, історія, QR.
 // Тема/розмір/банер делеговано в settings, автомасштаб — у fit-text.
 // Глобал `QRCode` приходить із CDN-скрипта (підключений у index.html).
-import { HISTORY_LIMIT } from "./config.js";
+import {
+  HISTORY_LIMIT, QR_SIZE, QR_CORRECT_LEVEL,
+  ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT,
+  TEXT_PLACEHOLDER, TEXT_QR_UNAVAILABLE
+} from "./config.js";
 import { $, show, resolveRoom, makeToken, saveRoom } from "./utils.js";
 import { connect, decode } from "./mqtt-client.js";
 import { fit } from "./fit-text.js";
@@ -30,7 +34,7 @@ export function init() {
       liveEl.textContent = text;
     } else {
       liveEl.classList.add("placeholder");
-      liveEl.textContent = "Очікую текст…";
+      liveEl.textContent = TEXT_PLACEHOLDER;
     }
     fitLive();
   }
@@ -56,7 +60,7 @@ export function init() {
 
   connect(room, (raw) => {
     const msg = decode(raw);
-    if (msg.type === "commit") {
+    if (msg.type === MSG_TYPE_COMMIT) {
       appendLine(msg.text);
       setLive("");
     } else {
@@ -71,12 +75,12 @@ export function init() {
   $("qr-link").textContent = senderUrl;
   try {
     if (typeof QRCode !== "undefined") {
-      new QRCode($("qr"), { text: senderUrl, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+      new QRCode($("qr"), { text: senderUrl, width: QR_SIZE, height: QR_SIZE, correctLevel: QRCode.CorrectLevel[QR_CORRECT_LEVEL] });
     } else {
-      $("qr").textContent = "QR недоступний — відкрийте посилання нижче вручну.";
+      $("qr").textContent = TEXT_QR_UNAVAILABLE;
     }
   } catch (e) {
-    $("qr").textContent = "QR недоступний — відкрийте посилання нижче вручну.";
+    $("qr").textContent = TEXT_QR_UNAVAILABLE;
   }
   $("qr-toggle").addEventListener("click", minimizeQr);
 
@@ -84,7 +88,8 @@ export function init() {
   settings.init({ onSizeChange: fitLive, onShowQr: showQr });
 
   window.addEventListener("resize", fitLive);
-  window.addEventListener("orientationchange", () => setTimeout(fitLive, 300));
+  window.addEventListener("orientationchange", () => setTimeout(fitLive, ORIENTATION_DELAY_MS));
 
   fitLive();
 }
+

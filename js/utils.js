@@ -1,5 +1,5 @@
 // Дрібні хелпери: DOM, генерація токена, парсинг URL, кімната, статус.
-import { LS_ROOM } from "./config.js";
+import { LS_ROOM, TOKEN_ALPHABET, TOKEN_LENGTH } from "./config.js";
 import * as store from "./store.js";
 
 export function $(id) { return document.getElementById(id); }
@@ -10,13 +10,12 @@ export function show(screenId) {
   $(screenId).classList.add("active");
 }
 
-// Випадковий токен кімнати: 24 символи base62 (єдиний «секрет» парування).
+// Випадковий токен кімнати (base62, довжина TOKEN_LENGTH — єдиний «секрет» парування).
 export function makeToken() {
-  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  const bytes = new Uint8Array(24);
+  const bytes = new Uint8Array(TOKEN_LENGTH);
   crypto.getRandomValues(bytes);
   let out = "";
-  for (let i = 0; i < bytes.length; i++) out += alphabet[bytes[i] % alphabet.length];
+  for (let i = 0; i < bytes.length; i++) out += TOKEN_ALPHABET[bytes[i] % TOKEN_ALPHABET.length];
   return out;
 }
 
