@@ -2,4 +2,4 @@
 .playwright-mcp/
 
 # Скриншоти прев'ю
-display-preview.png
+display-*.png

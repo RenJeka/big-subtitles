@@ -6,6 +6,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>ВеликіСлова</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Andika:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -67,10 +70,13 @@
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
 
-  <!-- Модулі застосунку (порядок важливий: спершу config/utils, потім решта) -->
+  <!-- Модулі застосунку (порядок важливий: залежності завантажуються першими) -->
   <script src="js/config.js"></script>
+  <script src="js/store.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/fit-text.js"></script>
   <script src="js/mqtt-client.js"></script>
+  <script src="js/settings.js"></script>
   <script src="js/display.js"></script>
   <script src="js/sender.js"></script>
   <script src="js/app.js"></script>

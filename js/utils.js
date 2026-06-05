@@ -4,6 +4,7 @@ window.VS = window.VS || {};
 (function (VS) {
   "use strict";
   var C = VS.config;
+  var S = VS.store;
 
   function $(id) { return document.getElementById(id); }
 
@@ -46,12 +47,12 @@ window.VS = window.VS || {};
   // Кімната: спершу з #room=, інакше з localStorage.
   function resolveRoom() {
     var room = getHashParam("room");
-    if (!room) { try { room = localStorage.getItem(C.LS_ROOM); } catch (e) {} }
+    if (!room) room = S.get(C.LS_ROOM, null);
     return room || null;
   }
 
   function saveRoom(room) {
-    try { localStorage.setItem(C.LS_ROOM, room); } catch (e) {}
+    S.set(C.LS_ROOM, room);
   }
 
   // Оновити індикатор з'єднання. state: "ok" | "err" | "" (нейтральний).

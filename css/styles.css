@@ -1,9 +1,11 @@
 :root {
   --bg: #000;
   --fg: #fff;
-  --muted: #888;
+  --muted: #888;      /* службовий текст (статус, підказки) */
+  --history: #c9c9c9; /* історія — навмисно контрастніше за muted */
   --accent: #4da3ff;
   --panel: #1c1c1e;
+  --glow: rgba(77, 163, 255, 0.16); /* субтильне світіння за live-текстом */
   --ok: #34c759;
   --warn: #ff9f0a;
   --err: #ff453a;
@@ -13,14 +15,18 @@ body.theme-light {
   --bg: #fff;
   --fg: #000;
   --muted: #666;
+  --history: #3a3a3a;
   --panel: #f0f0f0;
+  --glow: rgba(77, 163, 255, 0.12);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body {
   margin: 0; padding: 0; height: 100%; width: 100%;
   background: var(--bg); color: var(--fg);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* Andika — шрифт SIL для високої читабельності (повна кирилиця); */
+  /* системний sans-serif як fallback, поки шрифт вантажиться. */
+  font-family: "Andika", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow: hidden;
   -webkit-text-size-adjust: 100%;
 }
@@ -75,19 +81,39 @@ html, body {
 #history .line {
   font-size: clamp(20px, 4vh, 48px);
   line-height: 1.2;
-  color: var(--muted);
+  color: var(--history);
   white-space: pre-wrap;
   word-break: break-word;
   margin: 6px 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+/* Початковий стан щойно доданого рядка — анімується до видимого. */
+#history .line.line-enter {
+  opacity: 0;
+  transform: translateY(10px);
 }
 #live-wrap {
   flex: 1 1 auto;
+  position: relative;
   display: flex; align-items: center; justify-content: center;
   padding: 16px 24px calc(16px + env(safe-area-inset-bottom, 0px));
   overflow: hidden;
   min-height: 0;
 }
+/* Субтильне світіння за текстом — додає глибини, не торкаючись контрасту. */
+#live-wrap::before {
+  content: "";
+  position: absolute; left: 50%; top: 50%;
+  width: 85%; height: 60%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center, var(--glow) 0%, transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
 #live {
+  position: relative;
+  z-index: 1;
   font-weight: 700;
   line-height: 1.1;
   text-align: center;
@@ -118,10 +144,15 @@ html, body {
 #settings input[type=range] { width: 100%; }
 #settings .row { display: flex; gap: 8px; }
 #settings button {
-  flex: 1; padding: 10px; border: none; border-radius: 10px;
-  background: var(--accent); color: #fff; font-size: 14px; cursor: pointer;
+  flex: 1; padding: 10px; border: 2px solid var(--accent); border-radius: 10px;
+  background: var(--accent); color: #fff; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
-#settings button.off { background: rgba(127,127,127,0.25); color: var(--fg); }
+/* Неактивний стан: явно «прибраний» — без заливки, приглушений. */
+#settings button.off {
+  background: transparent; border-color: rgba(127,127,127,0.4);
+  color: var(--muted); font-weight: 400; opacity: 0.8;
+}
 
 /* QR / парування */
 #qr-box {
@@ -180,3 +211,10 @@ html, body {
   background: var(--panel); color: var(--fg); cursor: pointer;
 }
 .hidden { display: none !important; }
+
+/* Поважати системне налаштування зменшеного руху. */
+@media (prefers-reduced-motion: reduce) {
+  #history .line { transition: none; }
+  #history .line.line-enter { opacity: 1; transform: none; }
+  #settings button { transition: none; }
+}
