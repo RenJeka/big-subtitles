@@ -1,5 +1,5 @@
 // Дрібні хелпери: DOM, генерація токена, парсинг URL, кімната, статус, QR-модал.
-import { LS_ROOM, TOKEN_ALPHABET, TOKEN_LENGTH, QR_SIZE, QR_CORRECT_LEVEL, TEXT_QR_UNAVAILABLE } from "./config.js";
+import { LS_ROOM, LS_KEY, TOKEN_ALPHABET, TOKEN_LENGTH, QR_SIZE, QR_CORRECT_LEVEL, TEXT_QR_UNAVAILABLE } from "./config.js";
 import * as store from "./store.js";
 
 export function $(id) { return document.getElementById(id); }
@@ -48,6 +48,17 @@ export function saveRoom(room) {
   store.set(LS_ROOM, room);
 }
 
+// E2E-ключ (base64url): спершу з #…&k=, інакше з localStorage. Парний до кімнати.
+export function resolveKey() {
+  let key = getHashParam("k");
+  if (!key) key = store.get(LS_KEY, null);
+  return key || null;
+}
+
+export function saveKey(key) {
+  store.set(LS_KEY, key);
+}
+
 // Оновити індикатор з'єднання. state: "ok" | "err" | "" (нейтральний).
 export function setStatus(el, state, text) {
   el.classList.remove("is-connected", "is-error");
@@ -60,8 +71,8 @@ export function setStatus(el, state, text) {
 // Лінива ініціалізація: QR генерується лише раз (при першому відкритті).
 let _qrReady = false;
 
-export function initQrModal(room) {
-  const senderUrl = location.origin + location.pathname + "?role=sender#room=" + room;
+export function initQrModal(room, keyB64) {
+  const senderUrl = location.origin + location.pathname + "?role=sender#room=" + room + "&k=" + keyB64;
   $("qr-link").textContent = senderUrl;
   try {
     if (typeof QRCode !== "undefined") {

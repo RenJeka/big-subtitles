@@ -39,6 +39,14 @@ export const LS_SENDER_THEME = "velyki.senderTheme"; // власна тема Se
 export const LS_PUSH_THEME = "velyki.pushTheme";     // тема Display, яку Sender хоче надіслати
 export const LS_MODE = "velyki.mode";    // режим показу live-тексту Display
 export const LS_SPEED = "velyki.speed";  // швидкість авто-руху (суфлер/бігуча строка)
+export const LS_KEY = "velyki.key";      // E2E-ключ кімнати (base64url, парний до LS_ROOM)
+
+// ===================== E2E-шифрування (AES-GCM) =====================
+// Брокер публічний → payload шифрується у браузері. Ключ не публікується ніколи:
+// несеться у фрагменті QR-URL (#…&k=) і персиститься поряд із кімнатою.
+export const KEY_BYTES = 32;   // 256-біт ключ AES-GCM
+export const IV_BYTES = 12;    // свіжий IV на кожне повідомлення (GCM)
+export const PAYLOAD_SEP = "."; // base64url(iv) + "." + base64url(ciphertext)
 
 // ===================== Ролі / екрани =====================
 

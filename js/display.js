@@ -4,8 +4,9 @@ import {
   HISTORY_LIMIT, ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
   TEXT_PLACEHOLDER, ROLE_DISPLAY
 } from "./config.js";
-import { $, show, resolveRoom, makeToken, saveRoom, initQrModal, openQrModal } from "./utils.js";
+import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal } from "./utils.js";
 import { connect, decode } from "./mqtt-client.js";
+import { makeKeyB64, initKey, decrypt } from "./crypto.js";
 import { createLiveView } from "./live-view.js";
 import * as settings from "./settings.js";
 
@@ -15,8 +16,15 @@ export function init() {
   let room = resolveRoom();
   if (!room) room = makeToken();
   saveRoom(room);
+
+  // E2E-ключ: відновити з localStorage/URL або згенерувати новий (один раз).
+  let key = resolveKey();
+  if (!key) key = makeKeyB64();
+  saveKey(key);
+  initKey(key, "decrypt");
+
   if (location.hash.indexOf("room=") === -1) {
-    location.hash = "room=" + room;
+    location.hash = "room=" + room + "&k=" + key;
   }
 
   const historyEl = $("history");
@@ -81,22 +89,26 @@ export function init() {
   });
 
   connect(room, ROLE_DISPLAY, (raw) => {
-    const msg = decode(raw);
-    if (msg.type === MSG_TYPE_SETTINGS) {
-      // Sender надіслав налаштування — застосувати (Sender має пріоритет)
-      settings.applyRemoteSettings(msg.size, msg.displayTheme, msg.mode, msg.speed);
-      syncView();
-      liveView.refresh();
-    } else if (msg.type === MSG_TYPE_COMMIT) {
-      appendLine(msg.text);
-      setLive("");
-    } else {
-      setLive(msg.text || "");
-    }
+    // Дешифруємо у браузері; null = хибний ключ / підміна / чужий формат → тихо ігноруємо.
+    decrypt(raw).then((json) => {
+      if (json === null) return;
+      const msg = decode(json);
+      if (msg.type === MSG_TYPE_SETTINGS) {
+        // Sender надіслав налаштування — застосувати (Sender має пріоритет)
+        settings.applyRemoteSettings(msg.size, msg.displayTheme, msg.mode, msg.speed);
+        syncView();
+        liveView.refresh();
+      } else if (msg.type === MSG_TYPE_COMMIT) {
+        appendLine(msg.text);
+        setLive("");
+      } else {
+        setLive(msg.text || "");
+      }
+    });
   }, $("status-display"));
 
   // ---- QR (модальний) ----
-  initQrModal(room);
+  initQrModal(room, key);
 
   // ---- Налаштування (тема/розмір/режим/швидкість/банер/QR) ----
   settings.init({

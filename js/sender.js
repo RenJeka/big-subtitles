@@ -9,8 +9,9 @@ import {
   SPEED_MIN, SPEED_MAX, MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   ROLE_SENDER
 } from "./config.js";
-import { $, show, resolveRoom, saveRoom, setStatus, initQrModal, openQrModal } from "./utils.js";
+import { $, show, resolveRoom, saveRoom, resolveKey, saveKey, setStatus, initQrModal, openQrModal } from "./utils.js";
 import { connect, encode } from "./mqtt-client.js";
+import { initKey, encrypt } from "./crypto.js";
 import * as store from "./store.js";
 
 export function init() {
@@ -81,27 +82,40 @@ export function init() {
   }
   saveRoom(room);
 
+  // E2E-ключ обов'язковий: без нього Display не зможе дешифрувати наш текст.
+  const key = resolveKey();
+  if (!key) {
+    $("input").value = "";
+    $("input").placeholder = "Немає ключа. Відскануйте QR з дисплея.";
+    $("input").disabled = true;
+    setStatus($("status-sender"), "err", "немає ключа");
+    return;
+  }
+  saveKey(key);
+  initKey(key, "encrypt");
+
   // QR-модал (той самий, що і на Display)
-  initQrModal(room);
+  initQrModal(room, key);
 
   // ===================== MQTT =====================
   const conn = connect(room, ROLE_SENDER, null, $("status-sender"));
 
   function publishSettings() {
     if (!conn || !conn.client) return;
-    const payload = JSON.stringify({
+    const json = JSON.stringify({
       type: MSG_TYPE_SETTINGS,
       size: displaySize,
       displayTheme,
       mode: displayMode,
       speed: displaySpeed
     });
-    conn.client.publish(conn.topic, payload, { retain: true, qos: 0 });
+    encrypt(json).then((payload) => conn.client.publish(conn.topic, payload, { retain: true, qos: 0 }));
   }
 
   function publish(type, text, retain) {
     if (!conn || !conn.client) return;
-    conn.client.publish(conn.topic, encode(type, text), { retain: !!retain, qos: 0 });
+    encrypt(encode(type, text)).then((payload) =>
+      conn.client.publish(conn.topic, payload, { retain: !!retain, qos: 0 }));
   }
 
   // При кожному (пере)підключенні — одразу надіслати актуальні налаштування.
