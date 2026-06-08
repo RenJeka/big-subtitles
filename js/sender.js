@@ -122,7 +122,9 @@ export function init() {
       mode: displayMode,
       speed: displaySpeed
     });
-    encrypt(json).then((payload) => conn.client.publish(conn.topic, payload, { retain: true, qos: 0 }));
+    // Окрема тема velyki/<room>/settings — щоб retained-налаштування не затирались
+    // retained-`live` (на одну тему припадає лише один retained-payload).
+    encrypt(json).then((payload) => conn.client.publish(conn.settingsTopic, payload, { retain: true, qos: 0 }));
   }
 
   function publish(type, text, retain) {

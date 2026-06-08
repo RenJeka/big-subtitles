@@ -4,7 +4,7 @@ import {
   BROKER, TOPIC_PREFIX, CLIENT_ID_PREFIX,
   RECONNECT_PERIOD_MS, CONNECT_TIMEOUT_MS, KEEPALIVE_SEC,
   MSG_TYPE_LIVE, ROLE_DISPLAY, ROLE_SENDER,
-  PRESENCE_INFIX, PRESENCE_ONLINE, PRESENCE_OFFLINE,
+  PRESENCE_INFIX, PRESENCE_ONLINE, PRESENCE_OFFLINE, SETTINGS_INFIX,
   TEXT_STATUS_CONNECTED, TEXT_STATUS_WAITING, TEXT_STATUS_RECONNECT,
   TEXT_STATUS_OFFLINE, TEXT_STATUS_CLOSED, TEXT_STATUS_ERROR, TEXT_STATUS_NO_MQTT
 } from "./config.js";
@@ -27,13 +27,14 @@ export function decode(raw) {
 // Підключитися до брокера. onMessage===null → лише публікація даних (Sender),
 // але presence-підписка діє завжди — обидві ролі стежать за присутністю партнера.
 // Зелене «з'єднано» = брокер + партнер на зв'язку; інакше «очікування пристрою…».
-// Повертає { client, topic } або null, якщо бібліотека недоступна.
+// Повертає { client, topic, settingsTopic } або null, якщо бібліотека недоступна.
 export function connect(room, role, onMessage, statusEl, onPeerConnectionChange) {
   if (typeof mqtt === "undefined") {
     setStatus(statusEl, "err", TEXT_STATUS_NO_MQTT);
     return null;
   }
   const topic = TOPIC_PREFIX + room;
+  const settingsTopic = topic + SETTINGS_INFIX; // окремий retained-слот під налаштування
   const peerRole = role === ROLE_DISPLAY ? ROLE_SENDER : ROLE_DISPLAY;
   const ownPresenceTopic = topic + PRESENCE_INFIX + role;
   const peerPresenceTopic = topic + PRESENCE_INFIX + peerRole;
@@ -69,7 +70,11 @@ export function connect(room, role, onMessage, statusEl, onPeerConnectionChange)
     // Оголосити власну присутність (retain — щоб партнер дізнався, навіть приєднавшись пізніше).
     client.publish(ownPresenceTopic, PRESENCE_ONLINE, { retain: true, qos: 0 });
     client.subscribe(peerPresenceTopic);
-    if (onMessage) client.subscribe(topic);
+    // Display (onMessage!==null) слухає і потік тексту, і налаштування (окремі теми).
+    if (onMessage) {
+      client.subscribe(topic);
+      client.subscribe(settingsTopic);
+    }
     refreshStatus();
   });
   client.on("reconnect", () => {
@@ -90,7 +95,9 @@ export function connect(room, role, onMessage, statusEl, onPeerConnectionChange)
     if (t === peerPresenceTopic) {
       peerOnline = payload.toString() === PRESENCE_ONLINE;
       refreshStatus();
-    } else if (t === topic && onMessage) {
+    } else if ((t === topic || t === settingsTopic) && onMessage) {
+      // Обидві теми несуть зашифрований payload; тип (live/commit/settings)
+      // визначає вже сам onMessage після дешифрування.
       onMessage(payload.toString());
     }
   });
@@ -100,6 +107,6 @@ export function connect(room, role, onMessage, statusEl, onPeerConnectionChange)
     client.publish(ownPresenceTopic, PRESENCE_OFFLINE, { retain: true, qos: 0 });
   });
 
-  return { client, topic };
+  return { client, topic, settingsTopic };
 }
 

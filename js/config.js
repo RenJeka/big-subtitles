@@ -29,6 +29,13 @@ export const PRESENCE_INFIX = "/presence/";
 export const PRESENCE_ONLINE = "1";
 export const PRESENCE_OFFLINE = ""; // порожній payload очищає retained (LWT і вихід)
 
+// ===================== Тема налаштувань =====================
+// Налаштування (settings) публікуються в ОКРЕМУ тему velyki/<room>/settings із
+// власним retain. Інакше retained-слот цієї теми затирав би retained-`live`
+// (на тему припадає рівно один retained-payload), і перезавантажений Display не
+// отримував би актуальних налаштувань Sender.
+export const SETTINGS_INFIX = "/settings";
+
 // ===================== Ключі localStorage =====================
 
 export const LS_ROOM = "velyki.room";
