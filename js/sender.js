@@ -4,13 +4,13 @@
 import {
   DEBOUNCE_MS, FOCUS_DELAY_MS,
   MSG_TYPE_LIVE, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
-  DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED, HISTORY_LIMIT,
+  DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED,
   LS_SENDER_THEME, LS_PUSH_THEME, LS_SIZE, LS_MODE, LS_SPEED,
   SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP,
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   ROLE_SENDER
 } from "./config.js";
-import { $, show, resolveRoom, saveRoom, resolveKey, saveKey, setStatus, initQrModal, openQrModal, bindOutsideClose } from "./utils.js";
+import { $, show, resolveRoom, saveRoom, resolveKey, saveKey, setStatus, initQrModal, openQrModal, bindOutsideClose, createHistory, highlightModeButtons } from "./utils.js";
 import { connect, encode } from "./mqtt-client.js";
 import { initKey, encrypt } from "./crypto.js";
 import * as store from "./store.js";
@@ -66,14 +66,10 @@ export function init() {
   }
 
   function updateDisplayModeBtns(mode) {
-    Object.keys(SENDER_MODE_BTN_IDS).forEach((m) => {
-      const btn = $(SENDER_MODE_BTN_IDS[m]);
-      if (btn) btn.className = (m === mode) ? "" : "secondary outline";
-    });
+    highlightModeButtons(SENDER_MODE_BTN_IDS, mode);
     const speedRow = $("sender-speed-row");
     if (speedRow) {
-      const show = (mode === MODE_TELE || mode === MODE_MARQUEE);
-      speedRow.classList.toggle("hidden", !show);
+      speedRow.classList.toggle("hidden", !(mode === MODE_TELE || mode === MODE_MARQUEE));
     }
   }
 
@@ -122,7 +118,9 @@ export function init() {
       mode: displayMode,
       speed: displaySpeed
     });
-    encrypt(json).then((payload) => conn.client.publish(conn.topic, payload, { retain: true, qos: 0 }));
+    // Окрема тема velyki/<room>/settings — щоб retained-налаштування не затирались
+    // retained-`live` (на одну тему припадає лише один retained-payload).
+    encrypt(json).then((payload) => conn.client.publish(conn.settingsTopic, payload, { retain: true, qos: 0 }));
   }
 
   function publish(type, text, retain) {
@@ -213,49 +211,6 @@ export function init() {
     $("sender-settings").classList.remove("open");
   });
 
-  // ===================== Історія Sender =====================
-  const historyEl = $("sender-history");
-  const historyPanel = $("sender-history-panel");
-  const historyEmpty = $("sender-history-empty");
-
-  function updateEmptyHint() {
-    if (historyEl.children.length > 0) {
-      historyEmpty.classList.add("hidden");
-    } else {
-      historyEmpty.classList.remove("hidden");
-    }
-  }
-
-  function appendSenderLine(text) {
-    text = (text || "").replace(/\n+$/, "");
-    if (!text.trim().length) return;
-    const d = document.createElement("div");
-    d.className = "line line-enter";
-    d.textContent = text;
-    historyEl.appendChild(d);
-    requestAnimationFrame(() => d.classList.remove("line-enter"));
-    while (historyEl.children.length > HISTORY_LIMIT) {
-      historyEl.removeChild(historyEl.firstChild);
-    }
-    historyEl.scrollTop = historyEl.scrollHeight;
-    updateEmptyHint();
-  }
-
-  historyEl.addEventListener("click", function (e) {
-    var line = e.target;
-    while (line && line !== historyEl) {
-      if (line.classList && line.classList.contains("line")) break;
-      line = line.parentElement;
-    }
-    if (!line || line === historyEl) return;
-    input.value = line.textContent;
-    historyPanel.classList.remove("open");
-    scheduleLive();
-    input.focus();
-  });
-
-  updateEmptyHint();
-
   // ===================== Введення тексту =====================
   const input = $("input");
   let timer = null;
@@ -270,12 +225,20 @@ export function init() {
 
   input.addEventListener("input", scheduleLive);
 
+  // Історія відправлених: клік по рядку повертає його в поле для повторної відправки.
+  const history = createHistory($("sender-history"), $("sender-history-empty"), (text) => {
+    input.value = text;
+    $("sender-history-panel").classList.remove("open");
+    scheduleLive();
+    input.focus();
+  });
+
   function commitLine() {
     const line = input.value;
     if (timer) { clearTimeout(timer); timer = null; }
     if (line.trim().length) {
       publish(MSG_TYPE_COMMIT, line, false);
-      appendSenderLine(line);
+      history.append(line);
     }
     input.value = "";
     publish(MSG_TYPE_LIVE, "", true); // очистити retained live

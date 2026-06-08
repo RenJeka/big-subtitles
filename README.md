@@ -108,11 +108,16 @@ spec-velyki-slova-mvp.md # вихідна специфікація MVP
 
 Payload кожного повідомлення — `base64url(iv).base64url(ciphertext)` (AES-GCM над JSON):
 
-| Повідомлення | Коли | retain |
-|---|---|---|
-| `{ "type": "live", "text": "…" }` | при кожній зміні поля (debounce) | так |
-| `{ "type": "commit", "text": "…" }` | натиснуто Enter — рядок іде в історію | ні |
-| `{ "type": "settings", "size", "displayTheme", "mode", "speed" }` | Sender керує показом на Display | так |
+| Повідомлення | Тема | Коли | retain |
+|---|---|---|---|
+| `{ "type": "live", "text": "…" }` | `velyki/<room>` | при кожній зміні поля (debounce) | так |
+| `{ "type": "commit", "text": "…" }` | `velyki/<room>` | натиснуто Enter — рядок іде в історію | ні |
+| `{ "type": "settings", "size", "displayTheme", "mode", "speed" }` | `velyki/<room>/settings` | Sender керує показом на Display | так |
+
+`settings` йде в **окрему тему**, а не в тему кімнати: на одну тему припадає лише один
+retained-payload, тож у спільній темі свіжий retained-`live` затирав би retained-`settings`,
+і перезавантажений Display не отримував би актуальних налаштувань. Display підписується на
+обидві теми.
 
 Display тримає історію (останні ~10 рядків) у пам'яті; `retain` на `live`/`settings` дає
 останній стан тому, хто приєднався пізніше.

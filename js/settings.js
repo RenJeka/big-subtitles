@@ -6,7 +6,7 @@ import {
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE
 } from "./config.js";
 import * as store from "./store.js";
-import { $ } from "./utils.js";
+import { $, highlightModeButtons } from "./utils.js";
 
 let currentSize = 1;
 let currentMode = DEFAULT_MODE;
@@ -33,15 +33,11 @@ function updateSpeedValue() {
 
 // Підсвітити активну кнопку режиму (активна — без класу, решта — secondary outline).
 function updateModeBtns(mode) {
-  Object.keys(MODE_BTN_IDS).forEach((m) => {
-    const btn = $(MODE_BTN_IDS[m]);
-    if (btn) btn.className = (m === mode) ? "" : "secondary outline";
-  });
+  highlightModeButtons(MODE_BTN_IDS, mode);
   // Швидкість має сенс лише для авто-руху (суфлер/бігуча строка).
   const speedRow = $("speed-row");
   if (speedRow) {
-    const show = (mode === MODE_TELE || mode === MODE_MARQUEE);
-    speedRow.classList.toggle("hidden", !show);
+    speedRow.classList.toggle("hidden", !(mode === MODE_TELE || mode === MODE_MARQUEE));
   }
 }
 

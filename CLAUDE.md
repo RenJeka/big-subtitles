@@ -45,8 +45,10 @@ py -m http.server 8000        # або: npx http-server -p 8000
 Один HTML, **три екрани/режими** в одному коді; режим визначає `app.js` за `?role=display|sender`,
 інакше — стартовий екран із кнопками. `index.html` містить розмітку всіх трьох екранів
 (`#screen-start`, `#screen-display`, `#screen-sender`) і підключає **лише точку входу**
-`<script type="module" src="js/app.js">`. CDN-бібліотеки (MQTT.js, qrcodejs) — класичні
-скрипти, що дають глобали `mqtt` / `QRCode` (у модулях використовуються через `typeof mqtt`).
+`<script type="module" src="js/app.js">`. Бібліотеки MQTT.js і qrcodejs — класичні
+скрипти, що дають глобали `mqtt` / `QRCode` (у модулях — через `typeof mqtt`); вони
+**self-host у `js/vendor/`** (не CDN): публічний брокер + E2E-ключ у фрагменті URL роблять
+підміну стороннього скрипта атакою на ключ. Версії й оновлення — `js/vendor/README.md`.
 
 **ES-модулі, явні `import`/`export`** (namespace-патерну `window.VS` більше немає). Шар залежностей:
 
@@ -85,7 +87,11 @@ py -m http.server 8000        # або: npx http-server -p 8000
   (debounce у sender ~150 мс; `retain` дає останній рядок тому, хто приєднався пізніше).
 - `{ "type":"commit", "text":"…" }` — Enter у sender: рядок іде в історію Display, без retain.
 - `{ "type":"settings", "size", "displayTheme", "mode", "speed" }` — Sender керує показом на
-  Display (publish з `retain:true`).
+  Display. Publish з `retain:true` в **окрему тему `velyki/<room>/settings`** (не в тему
+  кімнати!): на одну тему припадає лише один retained-payload, тож спільна тема призводила б
+  до затирання retained-`settings` свіжим retained-`live`, і перезавантажений Display не
+  отримував би актуальних налаштувань. Display підписується і на тему кімнати, і на тему
+  налаштувань; тип повідомлення визначає вже сам обробник після дешифрування.
 - **Presence**: кожна роль публікує retained-маркер у `velyki/<room>/presence/<role>` і
   стежить за партнером; LWT/закриття вкладки очищають маркер → статус «очікування пристрою…».
 - Display тримає історію (останні ~10 рядків) у самому DOM (`#history`), анімуючи лише новий рядок.

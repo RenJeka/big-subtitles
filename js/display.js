@@ -1,10 +1,10 @@
 // Режим Display (iPad): великий автомасштабований live-текст, історія, QR-модал.
 // Тема/розмір/банер делеговано в settings, автомасштаб — у fit-text.
 import {
-  HISTORY_LIMIT, ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
+  ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
   TEXT_PLACEHOLDER, ROLE_DISPLAY, MODE_TELE, MODE_MARQUEE
 } from "./config.js";
-import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal, closeQrModal, bindOutsideClose } from "./utils.js";
+import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal, closeQrModal, bindOutsideClose, createHistory } from "./utils.js";
 import { connect, decode } from "./mqtt-client.js";
 import { makeKeyB64, initKey, decrypt } from "./crypto.js";
 import { createLiveView } from "./live-view.js";
@@ -63,40 +63,11 @@ export function init() {
     if (!isMotionMode()) setLive(lastText);
   }
 
-  // Оновлює видимість заглушки «Поки що порожньо».
-  function updateEmptyHint() {
-    if (historyEl.children.length > 0) {
-      historyEmpty.classList.add("hidden");
-    } else {
-      historyEmpty.classList.remove("hidden");
-    }
-  }
-
-  // Додає один рядок в історію (DOM — джерело істини), анімуючи лише новий.
-  function appendLine(text) {
-    text = (text || "").replace(/\n+$/, "");
-    if (!text.trim().length) return;
-    const d = document.createElement("div");
-    d.className = "line line-enter";
-    d.textContent = text;
-    historyEl.appendChild(d);
-    requestAnimationFrame(() => d.classList.remove("line-enter"));
-    while (historyEl.children.length > HISTORY_LIMIT) {
-      historyEl.removeChild(historyEl.firstChild);
-    }
-    historyEl.scrollTop = historyEl.scrollHeight;
-    updateEmptyHint();
-  }
-
-  // Вибір елемента з історії → показати на екрані.
-  historyEl.addEventListener("click", function (e) {
-    var line = e.target;
-    while (line && line !== historyEl) {
-      if (line.classList && line.classList.contains("line")) break;
-      line = line.parentElement;
-    }
-    if (!line || line === historyEl) return;
-    setLive(line.textContent);
+  // Історія (DOM — джерело істини). Клік по рядку: у fit/scroll показуємо його як live,
+  // у режимах руху (суфлер/бігучка) — додаємо у безперервний потік (інакше клік був би no-op).
+  const history = createHistory(historyEl, historyEmpty, (text) => {
+    if (isMotionMode()) liveView.appendLine(text);
+    else setLive(text);
     historyPanel.classList.remove("open");
   });
 
@@ -111,7 +82,7 @@ export function init() {
         syncView();
         liveView.refresh();
       } else if (msg.type === MSG_TYPE_COMMIT) {
-        appendLine(msg.text); // запис в історію лишається в усіх режимах
+        history.append(msg.text); // запис в історію лишається в усіх режимах
         if (isMotionMode()) {
           liveView.appendLine(msg.text); // суфлер/бігучка: додати у безперервний потік
         } else {
@@ -157,6 +128,5 @@ export function init() {
 
   syncView();
   setLive("");
-  updateEmptyHint();
 }
 
