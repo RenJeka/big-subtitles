@@ -85,14 +85,14 @@ export const MODE_SCROLL = "scroll";
 export const MODE_TELE = "tele";
 export const MODE_MARQUEE = "marquee";
 
-// Швидкість авто-руху (рівні; ➖/➕ крок = 1): від «дуже повільно» до «середньо».
+// Швидкість авто-руху (рівні; ➖/➕ крок = 1): від «дуже повільно» до «дуже швидко».
 export const SPEED_MIN = 1;
-export const SPEED_MAX = 6;
+export const SPEED_MAX = 12;
 export const DEFAULT_SPEED = 2;
 
 // Маппінг рівня швидкості → px/сек: pxPerSec = base + (speed-1)*step.
 export const TELE_PX_BASE = 8;      // рівень 1 ≈ 8 px/с («дуже повільно»)
-export const TELE_PX_STEP = 12;     // рівень 6 ≈ 68 px/с («середньо»)
+export const TELE_PX_STEP = 12;     // рівень 6 ≈ 68 px/с, рівень 12 ≈ 140 px/с
 export const MARQUEE_PX_BASE = 30;  // бігучка трохи жвавіша за суфлер
 export const MARQUEE_PX_STEP = 24;
 
