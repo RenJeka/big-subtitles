@@ -11,6 +11,13 @@
 //  • коли нових повідомлень немає — потік ЗАСТИГАЄ на останньому видимому блоці
 //    (animation-fill-mode: forwards тримає кінцевий кадр).
 //
+// Ручний скрол назад (tele/marquee): щойно користувач починає скролити/свайпати,
+// авто-рух ПАУЗИТЬСЯ — перемикаємось на нативний overflow-скрол, конвертуючи поточний
+// transform-зсув у еквівалентний scrollTop/scrollLeft (координата вмісту під верхньою/
+// лівою межею = -tx = scroll). Через MOTION_SCROLL_RESUME_MS бездіяльності рух
+// ВІДНОВЛЮЄТЬСЯ з поточної позиції тією ж швидкістю (зворотна конвертація). Нове
+// повідомлення під час паузи лише тихо додається в кінець потоку — паузу не зриває.
+//
 // Стратегія руху: жодного requestAnimationFrame. Рух виконує CSS @keyframes
 // (linear) на композиторі GPU. JS лише на КОЖНУ зміну вмісту (нове повідомлення/
 // розмір/швидкість) вимірює сумарну геометрію потоку (scrollWidth/scrollHeight)
@@ -19,7 +26,8 @@
 import {
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   TELE_PX_BASE, TELE_PX_STEP, MARQUEE_PX_BASE, MARQUEE_PX_STEP,
-  SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED
+  SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED,
+  MOTION_SCROLL_RESUME_MS
 } from "./config.js";
 import { fit } from "./fit-text.js";
 
@@ -48,6 +56,8 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   let speed = DEFAULT_SPEED;
   let hasContent = false; // чи є у потоці хоч одне повідомлення (.vs-msg)
   let animating = false;  // чи триває рух потоку до поточної кінцевої точки
+  let scrubbing = false;  // користувач вручну скролить — авто-рух на паузі
+  let resumeTimer = null; // таймер відновлення авто-руху після бездіяльності
 
   function isMotion() { return mode === MODE_TELE || mode === MODE_MARQUEE; }
 
@@ -146,6 +156,84 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   }
   liveEl.addEventListener("animationend", onMotionEnd);
 
+  // ---- Ручний скрол назад + автопауза/автовідновлення ----
+
+  // Чи є що скролити (потік довший за екран по осі руху).
+  function hasOverflow() {
+    return (mode === MODE_MARQUEE)
+      ? liveEl.scrollWidth > wrapEl.clientWidth
+      : liveEl.scrollHeight > wrapEl.clientHeight;
+  }
+
+  // Поточна scroll-позиція по осі руху.
+  function readScroll() {
+    return (mode === MODE_MARQUEE) ? wrapEl.scrollLeft : wrapEl.scrollTop;
+  }
+  function writeScroll(px) {
+    if (mode === MODE_MARQUEE) wrapEl.scrollLeft = px; else wrapEl.scrollTop = px;
+  }
+  function setWrapScrollable(on) {
+    if (mode === MODE_MARQUEE) {
+      wrapEl.style.overflowX = on ? "auto" : "hidden";
+    } else {
+      wrapEl.style.overflowY = on ? "auto" : "hidden";
+    }
+    wrapEl.style.webkitOverflowScrolling = on ? "touch" : "";
+  }
+
+  // Увійти в ручний скрол: застигнути анімацію й перевести позицію в нативний скрол.
+  // Координата вмісту під верхньою/лівою межею = -tx (при русі) = scroll (при скролі).
+  function enterScrub() {
+    const tx = readTranslate();
+    animating = false;
+    scrubbing = true;
+    liveEl.style.animation = "none";
+    liveEl.style.transform = "none";
+    setWrapScrollable(true);
+    writeScroll(Math.max(0, tx == null ? 0 : -tx));
+  }
+
+  function armResumeTimer() {
+    if (resumeTimer) clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(resume, MOTION_SCROLL_RESUME_MS);
+  }
+  function clearResumeTimer() {
+    if (resumeTimer) { clearTimeout(resumeTimer); resumeTimer = null; }
+  }
+
+  // Відновити авто-рух із поточної scroll-позиції (зворотна конвертація → transform).
+  function resume() {
+    clearResumeTimer();
+    if (!scrubbing) return;
+    if (!isMotion() || !hasContent) { scrubbing = false; setWrapScrollable(false); return; }
+    const s = readScroll();
+    scrubbing = false;
+    setWrapScrollable(false);
+    writeScroll(0);
+    const ep = motionEndpoints();
+    let tx = -s;
+    if (tx > 0) tx = 0;
+    if (tx < ep.to) tx = ep.to;
+    liveEl.style.transform = axisTransform(tx); // continueFromCurrent прочитає його
+    animating = true;
+    setMotionAnim(true);
+  }
+
+  // Старт жесту скролу (touch/колесо): спинити рух і завести таймер відновлення.
+  function onScrollIntent() {
+    if (!isMotion() || prefersReducedMotion() || !hasContent || !hasOverflow()) return;
+    if (!scrubbing) enterScrub();
+    armResumeTimer();
+  }
+  // Продовження скролу (зокрема інерційний скрол iOS без touch-подій) — тримати паузу.
+  function onScrollMove() {
+    if (scrubbing) armResumeTimer();
+  }
+  wrapEl.addEventListener("touchstart", onScrollIntent, { passive: true });
+  wrapEl.addEventListener("wheel", onScrollIntent, { passive: true });
+  wrapEl.addEventListener("touchmove", onScrollMove, { passive: true });
+  wrapEl.addEventListener("scroll", onScrollMove, { passive: true });
+
   // Додати окремий видимий блок повідомлення в кінець потоку показу.
   function appendMessage(text) {
     const el = document.createElement("div");
@@ -162,7 +250,11 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     liveEl.style.removeProperty("--vs-from");
     liveEl.style.removeProperty("--vs-to");
     liveEl.style.removeProperty("--vs-dur");
+    wrapEl.style.overflowX = "";
+    wrapEl.style.overflowY = "";
+    wrapEl.style.webkitOverflowScrolling = "";
     wrapEl.scrollTop = 0;
+    wrapEl.scrollLeft = 0;
   }
 
   function render() {
@@ -201,6 +293,9 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       appendMessage(text);
       hasContent = true;
       applyMotionFont();
+      // Користувач читає старе (ручний скрол): тихо лишаємо нове в кінці потоку,
+      // не зриваючи паузу — автопрокрутка наздожене його після відновлення.
+      if (scrubbing) return;
       if (prefersReducedMotion()) {
         animating = false;
         liveEl.style.animation = "none";
@@ -214,6 +309,8 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     setMode(m) {
       m = m || DEFAULT_MODE;
       if (m === mode) return;
+      clearResumeTimer();
+      scrubbing = false;
       mode = m;
       if (isMotion()) { liveEl.textContent = ""; hasContent = false; animating = false; } // нова сесія показу
       render();
@@ -226,6 +323,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     refresh() {
       if (isMotion()) {
         applyMotionFont();
+        if (scrubbing) return;              // ручний скрол — не чіпати позицію/overflow
         if (animating) setMotionAnim(true); // рух триває — продовжити з поточної позиції
         else restStatic();                  // застигле — оновити позицію під новий розмір
       } else if (mode === MODE_SCROLL) {

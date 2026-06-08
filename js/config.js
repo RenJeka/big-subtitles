@@ -123,6 +123,9 @@ export const DEBOUNCE_MS = 150;
 export const ORIENTATION_DELAY_MS = 300;
 // Затримка перед фокусом textarea у sender (ms)
 export const FOCUS_DELAY_MS = 300;
+// Скільки чекати після останньої дії користувача, перш ніж відновити авто-рух
+// суфлера/бігучки після ручного скролу назад (ms).
+export const MOTION_SCROLL_RESUME_MS = 5000;
 
 // ===================== Значення за замовчуванням =====================
 
