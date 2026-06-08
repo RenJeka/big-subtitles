@@ -45,8 +45,10 @@ py -m http.server 8000        # або: npx http-server -p 8000
 Один HTML, **три екрани/режими** в одному коді; режим визначає `app.js` за `?role=display|sender`,
 інакше — стартовий екран із кнопками. `index.html` містить розмітку всіх трьох екранів
 (`#screen-start`, `#screen-display`, `#screen-sender`) і підключає **лише точку входу**
-`<script type="module" src="js/app.js">`. CDN-бібліотеки (MQTT.js, qrcodejs) — класичні
-скрипти, що дають глобали `mqtt` / `QRCode` (у модулях використовуються через `typeof mqtt`).
+`<script type="module" src="js/app.js">`. Бібліотеки MQTT.js і qrcodejs — класичні
+скрипти, що дають глобали `mqtt` / `QRCode` (у модулях — через `typeof mqtt`); вони
+**self-host у `js/vendor/`** (не CDN): публічний брокер + E2E-ключ у фрагменті URL роблять
+підміну стороннього скрипта атакою на ключ. Версії й оновлення — `js/vendor/README.md`.
 
 **ES-модулі, явні `import`/`export`** (namespace-патерну `window.VS` більше немає). Шар залежностей:
 
