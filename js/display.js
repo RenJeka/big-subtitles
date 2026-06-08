@@ -10,6 +10,14 @@ import { makeKeyB64, initKey, decrypt } from "./crypto.js";
 import { createLiveView } from "./live-view.js";
 import * as settings from "./settings.js";
 
+/**
+ * Initialize and configure the display client: UI, live view, history, settings, MQTT connection, and QR modal.
+ *
+ * Sets or generates and persists the room token and E2E key, ensures the URL hash contains room and key,
+ * initializes decryption, creates and syncs the live view and history controller, connects to the MQTT broker
+ * to receive and apply remote settings and incoming messages, opens the QR modal, and wires UI event handlers
+ * (settings, history panels, resize/orientation refresh).
+ */
 export function init() {
   show("screen-display");
 

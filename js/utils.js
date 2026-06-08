@@ -2,6 +2,11 @@
 import { LS_ROOM, LS_KEY, TOKEN_ALPHABET, TOKEN_LENGTH, QR_SIZE, QR_CORRECT_LEVEL, TEXT_QR_UNAVAILABLE, HISTORY_LIMIT } from "./config.js";
 import * as store from "./store.js";
 
+/**
+ * Get a DOM element by its id.
+ * @param {string} id - The id of the element to retrieve.
+ * @returns {Element|null} The element with the given id, or `null` if none exists.
+ */
 export function $(id) { return document.getElementById(id); }
 
 export function show(screenId) {
@@ -69,7 +74,14 @@ export function setStatus(el, state, text) {
 
 // Закривати панель (прибирати клас "open") за кліком поза нею.
 // ignoreEls — кнопки-перемикачі панелі: клік по них не закриває (інакше той самий
-// клік, що відкрив панель, одразу б її закрив).
+/**
+ * Closes a panel when the user clicks outside of it.
+ *
+ * Adds a document-level click handler that removes the "open" class from the given panel element when a click occurs outside the panel and outside any provided ignore elements.
+ *
+ * @param {Element} panelEl - The panel element to close by removing its "open" class.
+ * @param {...Element} ignoreEls - Additional elements that should be treated as inside the panel (clicks on them will not close the panel).
+ */
 export function bindOutsideClose(panelEl, ...ignoreEls) {
   document.addEventListener("click", (e) => {
     if (!panelEl.classList.contains("open")) return;
@@ -84,11 +96,38 @@ export function bindOutsideClose(panelEl, ...ignoreEls) {
 // ===================== Історія (спільний віджет Display/Sender) =====================
 // Список рядків у DOM (джерело істини): append додає рядок з анімацією входу, обрізає
 // буфер до HISTORY_LIMIT і керує заглушкою «порожньо». Клік по рядку → onPick(text).
-// Повертає { append }.
+/**
+ * Create and manage a scrollable history list with click-to-pick entries.
+ *
+ * Appends text entries (trimming trailing newlines and ignoring blank/whitespace-only values),
+ * animates new lines with a "line-enter" class, enforces a maximum number of entries by
+ * removing oldest items (HISTORY_LIMIT), keeps the container scrolled to the bottom, and
+ * toggles the `hidden` class on the provided empty-state element based on whether the list
+ * has entries. Clicking a history line invokes `onPick` with the line's text content.
+ *
+ * @param {HTMLElement} listEl - Container element that holds history line elements.
+ * @param {HTMLElement} emptyEl - Element shown when the history is empty; this function toggles its `hidden` class.
+ * @param {(text: string) => void} onPick - Callback invoked with the text content when a history line is clicked.
+ * @returns {{ append: (text: string) => void }} An object with `append(text)` to add a new history entry.
+ */
 export function createHistory(listEl, emptyEl, onPick) {
+  /**
+   * Updates the empty-state hint visibility based on whether the list has items.
+   *
+   * Toggles the "hidden" class on the empty element: hides it when the list has one or more children, shows it when the list is empty.
+   */
   function updateEmptyHint() {
     emptyEl.classList.toggle("hidden", listEl.children.length > 0);
   }
+  /**
+   * Append a text entry to the history list and maintain the empty-state hint and size limit.
+   *
+   * If `text` ends with one or more newlines they are trimmed; if the trimmed text is empty or only
+   * whitespace no entry is added. Otherwise a new `.line` element is appended (an enter animation
+   * is triggered), oldest entries are removed while the list exceeds `HISTORY_LIMIT`, the list is
+   * scrolled to the bottom, and the empty-state hint is updated.
+   * @param {string} text - The text to append to the history; trailing newlines will be removed.
+   */
   function append(text) {
     text = (text || "").replace(/\n+$/, "");
     if (!text.trim().length) return;
@@ -116,7 +155,11 @@ export function createHistory(listEl, emptyEl, onPick) {
 }
 
 // Підсвітити активну кнопку режиму показу: активна — без класу, решта — "secondary outline".
-// btnIds — мапа { mode: elementId } (своя в Display і Sender, бо різні DOM-id).
+/**
+ * Set visual state for mode buttons by clearing classes on the active mode and applying "secondary outline" to the others.
+ * @param {Object.<string,string>} btnIds - Map from mode name to DOM element id for that mode's button.
+ * @param {string} mode - The currently active mode key whose button should be highlighted.
+ */
 export function highlightModeButtons(btnIds, mode) {
   Object.keys(btnIds).forEach((m) => {
     const btn = $(btnIds[m]);

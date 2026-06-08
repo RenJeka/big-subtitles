@@ -31,7 +31,12 @@ function updateSpeedValue() {
   if (el) el.textContent = currentSpeed + "/" + SPEED_MAX;
 }
 
-// Підсвітити активну кнопку режиму (активна — без класу, решта — secondary outline).
+/**
+ * Mark the given display mode as active and adjust visibility of the speed control row.
+ * 
+ * Shows the speed row when `mode` is `MODE_TELE` or `MODE_MARQUEE`; hides it otherwise.
+ * @param {string} mode - Display mode constant to activate (e.g., `MODE_FIT`, `MODE_SCROLL`, `MODE_TELE`, `MODE_MARQUEE`).
+ */
 function updateModeBtns(mode) {
   highlightModeButtons(MODE_BTN_IDS, mode);
   // Швидкість має сенс лише для авто-руху (суфлер/бігуча строка).
