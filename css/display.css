@@ -110,10 +110,39 @@
   white-space: nowrap;
   max-width: none;
 }
+/* Потік атомарних повідомлень (суфлер/бігучка) — кожна відправка це окремий
+   видимий блок .vs-msg, що додається в кінець і рухається разом з усіма
+   попередніми (як стрічка чату/новин), лишаючись візуально розрізнюваним. */
+#live-wrap.mode-tele #live,
+#live-wrap.mode-marquee #live {
+  display: flex;
+}
+#live-wrap.mode-tele #live {
+  flex-direction: column;
+}
+#live-wrap.mode-marquee #live {
+  flex-direction: row;
+  align-items: center;
+}
+.vs-msg { flex-shrink: 0; }
+#live-wrap.mode-tele .vs-msg + .vs-msg {
+  margin-top: 0.4em;
+}
+#live-wrap.mode-marquee .vs-msg {
+  white-space: nowrap;
+}
+#live-wrap.mode-marquee .vs-msg + .vs-msg {
+  margin-left: 2.5em;
+}
+#live-wrap.mode-marquee .vs-msg + .vs-msg::before {
+  content: "•  ";
+  opacity: 0.45;
+}
 /* Авто-рух суфлера/бігучки — ЧИСТА CSS-анімація на композиторі GPU (без JS у циклі).
-   Параметри (--vs-from/--vs-to/--vs-dur) виставляє live-view.js один раз на зміну
-   контенту; під час руху браузер нічого не перераховує. Один прохід без зациклення
-   (live-view.js керує чергою через `animationend`); forwards тримає кінцевий кадр. */
+   Параметри (--vs-from/--vs-to/--vs-dur) виставляє live-view.js на кожну зміну
+   сумарного вмісту потоку (нове повідомлення/розмір/швидкість) і ПРОДОВЖУЄ рух із
+   поточної позиції до нової кінцевої точки; forwards тримає кінцевий кадр, доки
+   наступне повідомлення не подовжить потік далі. */
 @keyframes vs-tele {
   from { transform: translate3d(0, var(--vs-from, 0), 0); }
   to   { transform: translate3d(0, var(--vs-to, 0), 0); }

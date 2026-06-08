@@ -2,23 +2,24 @@
 // fit — автомасштаб; scroll — фіксований розмір + ручний скрол;
 // tele/marquee — авто-рух ЧИСТОЮ CSS-анімацією (без JS у циклі).
 //
-// Модель руху (tele/marquee) — ЧЕРГА атомарних повідомлень:
-//  • кожне повідомлення проходить рух РІВНО ОДИН раз (без зациклення);
-//  • нова відправка під час показу НЕ перериває поточну, а стає в чергу й
-//    програється після неї («додавати в кінець»), але не миттєво по завершенню —
-//    старт наступного відкладається на MOTION_QUEUE_GAP_MS («дихання» між фразами);
-//  • коли черга порожня — останнє повідомлення ЗАСТИГАЄ видимим
+// Модель руху (tele/marquee) — БЕЗПЕРЕРВНИЙ ПОТІК атомарних повідомлень:
+//  • кожна відправка додає окремий видимий блок (.vs-msg) у кінець потоку —
+//    повідомлення не зливаються в один текст і лишаються розрізнюваними;
+//  • потік рухається в одному напрямку (вгору в суфлері, ліворуч у бігучці);
+//    нове повідомлення «під'їжджає» слідом за попереднім, НЕ перериваючи його —
+//    обидва можуть бути видимі одночасно (як стрічка чату/новин);
+//  • коли нових повідомлень немає — потік ЗАСТИГАЄ на останньому видимому блоці
 //    (animation-fill-mode: forwards тримає кінцевий кадр).
 //
 // Стратегія руху: жодного requestAnimationFrame. Рух виконує CSS @keyframes
-// (linear, один прохід) на композиторі GPU. JS лише ОДИН раз на зміну контенту/
-// розміру/швидкості вимірює геометрію й задає CSS-змінні --vs-from/--vs-to/--vs-dur,
-// а перехід до наступного повідомлення черги слухає через подію `animationend`.
+// (linear) на композиторі GPU. JS лише на КОЖНУ зміну вмісту (нове повідомлення/
+// розмір/швидкість) вимірює сумарну геометрію потоку (scrollWidth/scrollHeight)
+// і ПРОДОВЖУЄ рух із поточної позиції до нової кінцевої точки (--vs-from/--vs-to/
+// --vs-dur через від'ємний animation-delay) — без стрибків і перезапусків з нуля.
 import {
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   TELE_PX_BASE, TELE_PX_STEP, MARQUEE_PX_BASE, MARQUEE_PX_STEP,
-  SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED,
-  MOTION_QUEUE_GAP_MS
+  SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED
 } from "./config.js";
 import { fit } from "./fit-text.js";
 
@@ -45,14 +46,8 @@ function prefersReducedMotion() {
 export function createLiveView(liveEl, wrapEl, getSize) {
   let mode = DEFAULT_MODE;
   let speed = DEFAULT_SPEED;
-  let current = "";    // повідомлення, що зараз показується/застигло на екрані
-  let queue = [];      // повідомлення, що чекають своєї черги (tele/marquee)
-  let playing = false; // триває рух поточного повідомлення (ще не дограло)
-  let queueTimer = null; // відкладений старт наступного з черги (пауза між повідомленнями)
-
-  function clearQueueTimer() {
-    if (queueTimer != null) { clearTimeout(queueTimer); queueTimer = null; }
-  }
+  let hasContent = false; // чи є у потоці хоч одне повідомлення (.vs-msg)
+  let animating = false;  // чи триває рух потоку до поточної кінцевої точки
 
   function isMotion() { return mode === MODE_TELE || mode === MODE_MARQUEE; }
 
@@ -60,9 +55,10 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     liveEl.style.fontSize = scrollFontPx(wrapEl, getSize()) + "px";
   }
 
-  // Геометрія руху для поточного контенту: вхід з-за межі екрана (from) до кінцевої
-  // ВИДИМОЇ позиції (to). Якщо текст уміщається — застигає вирівняним до початку (to=0);
-  // якщо ні — застигає кінцем (показано «хвіст», який щойно прокрутили).
+  // Геометрія руху для поточного СУМАРНОГО вмісту потоку: вхід з-за межі екрана
+  // (from) до кінцевої ВИДИМОЇ позиції (to), де останній (найновіший) блок
+  // повністю видимий. Якщо потік коротший за екран — застигає вирівняним
+  // до початку (to=0); якщо довший — видно «хвіст» із найновішим повідомленням.
   function motionEndpoints() {
     let from, to;
     if (mode === MODE_MARQUEE) {
@@ -81,8 +77,8 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       : "translate3d(0," + px + "px,0)";
   }
 
-  // Поточний зсув #live (px) із матриці трансформації — щоб продовжити рух без стрибка
-  // на початок при зміні швидкості/розміру.
+  // Поточний зсув #live (px) із матриці трансформації — щоб продовжити рух без
+  // стрибка при додаванні нового повідомлення / зміні швидкості/розміру.
   function readTranslate() {
     const t = getComputedStyle(liveEl).transform;
     if (!t || t === "none") return null;
@@ -94,19 +90,19 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     return (mode === MODE_MARQUEE) ? v[4] : v[5]; // matrix(a,b,c,d,tx,ty)
   }
 
-  // Тримати поточне повідомлення застиглим у кінцевій (видимій) позиції — без анімації.
+  // Тримати потік застиглим у кінцевій (видимій) позиції — без анімації.
   function restStatic() {
     liveEl.style.animation = "none";
-    liveEl.style.transform = current ? axisTransform(motionEndpoints().to) : "";
+    liveEl.style.transform = hasContent ? axisTransform(motionEndpoints().to) : "";
   }
 
-  // Налаштувати CSS-анімацію руху під поточний контент/швидкість (ОДИН прохід + forwards).
+  // Налаштувати CSS-анімацію руху під поточний СУМАРНИЙ вміст потоку й швидкість.
   // ЄДИНЕ місце, де читаємо layout (scrollHeight/scrollWidth) — і лише на ЗМІНУ
-  // контенту/розміру, а не щокадрово. Далі рух веде CSS сам.
-  // continueFromCurrent — продовжити з поточної позиції (зміна швидкості/розміру),
-  // а не запускати з початку.
+  // вмісту/розміру/швидкості, а не щокадрово. Далі рух веде CSS сам.
+  // continueFromCurrent — продовжити з поточної позиції (нове повідомлення подовжило
+  // потік / змінилась швидкість/розмір), а не запускати з початку.
   function setMotionAnim(continueFromCurrent) {
-    if (!current) {                     // нема тексту — нема руху
+    if (!hasContent) {                  // нема тексту — нема руху
       liveEl.style.animation = "none";
       liveEl.style.transform = "";
       return;
@@ -116,7 +112,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
 
     // Продовження: обчислюємо пройдену частку p від поточного зсуву й вносимо її як
     // від'ємний animation-delay у ті самі keyframes (full from→to). Так рух не «стрибає»
-    // на старт при зміні швидкості/розміру.
+    // на старт при додаванні повідомлення / зміні швидкості/розміру.
     let delay = 0;
     if (continueFromCurrent && ep.distance > 0) {
       const cur = readTranslate();
@@ -131,44 +127,32 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     liveEl.style.setProperty("--vs-to", ep.to + "px");
     liveEl.style.setProperty("--vs-dur", dur + "s");
     // Перезапустити анімацію, щоб нові значення застосувались. Один reflow на зміну
-    // контенту (не на кадр): inline-"none" → reflow → повний inline-shorthand із delay.
-    // «1 forwards» — рівно один прохід, кінцевий (видимий) кадр лишається застиглим.
+    // вмісту (не на кадр): inline-"none" → reflow → повний inline-shorthand із delay.
+    // «1 forwards» — рух до нової кінцевої точки; кінцевий кадр лишається застиглим,
+    // доки наступне повідомлення не подовжить потік і не продовжить рух далі.
     const name = (mode === MODE_MARQUEE) ? "vs-marquee" : "vs-tele";
     liveEl.style.animation = "none";
     void liveEl.offsetWidth;
     liveEl.style.animation = name + " " + dur + "s linear " + delay + "s 1 forwards";
   }
 
-  // Почати показ одного повідомлення (з початку). За reduced-motion — статично, без руху.
-  function playMotion(text) {
-    current = text;
-    liveEl.textContent = current;
-    applyMotionFont();
-    if (prefersReducedMotion()) {
-      playing = false;
-      liveEl.style.animation = "none";
-      liveEl.style.transform = "";
-      return;
-    }
-    playing = true;
-    setMotionAnim(false);
-  }
-
-  // Поточне повідомлення дограло (без переривання) → застигнути на ньому, а наступне
-  // з черги почати не миттєво, а з невеликою паузою (MOTION_QUEUE_GAP_MS) — «дихання»
-  // між фразами, щоб глядач встиг усвідомити кінець попередньої перед стартом нової.
+  // Рух дограв до поточної кінцевої точки → застигнути на ній (forwards тримає кадр).
+  // Якщо тим часом надійшло нове повідомлення, рух уже продовжено далі раніше —
+  // ця стара анімація завершується через animationcancel, а не animationend.
   function onMotionEnd() {
-    if (!isMotion() || !playing) return;
-    playing = false; // поточне застигло (forwards тримає кадр) — і лишається, якщо черга порожня
-    if (queue.length) {
-      clearQueueTimer();
-      queueTimer = setTimeout(function () {
-        queueTimer = null;
-        if (isMotion() && !playing && queue.length) playMotion(queue.shift());
-      }, MOTION_QUEUE_GAP_MS);
-    }
+    if (!isMotion() || !animating) return;
+    animating = false;
+    restStatic();
   }
   liveEl.addEventListener("animationend", onMotionEnd);
+
+  // Додати окремий видимий блок повідомлення в кінець потоку показу.
+  function appendMessage(text) {
+    const el = document.createElement("div");
+    el.className = "vs-msg";
+    el.textContent = text;
+    liveEl.appendChild(el);
+  }
 
   // Скинути всі inline-стилі/змінні, які виставляли різні режими.
   function resetStyles() {
@@ -191,11 +175,9 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     } else if (mode === MODE_SCROLL) {
       applyMotionFont();
     } else {
-      // tele / marquee — показати поточне повідомлення (рух / застигле — за станом).
-      liveEl.textContent = current;
+      // tele / marquee — щойно скинутий потік (після зміни режиму): порожньо, без руху.
       applyMotionFont();
-      if (playing) setMotionAnim(false);
-      else restStatic();
+      restStatic();
     }
   }
 
@@ -207,36 +189,45 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       render();
     },
 
-    // tele/marquee: поставити одну відправку у чергу показу. Якщо зараз нічого не
-    // рухається — починаємо одразу; інакше повідомлення чекає й програється по черзі
-    // (поточне НЕ переривається).
+    // tele/marquee: додати одну відправку в кінець безперервного потоку показу.
+    // Потік рухається в одному напрямку; нове повідомлення наздоганяє попереднє,
+    // НЕ перериваючи його руху — обидва можуть бути видимі одночасно (як стрічка
+    // чату/новин). Коли потік порожній — старт іде з-за межі екрана.
     showLine(text) {
       if (!isMotion()) return;
       text = (text || "").replace(/\n+$/, "");
       if (!text.trim().length) return;
-      // «Зайнято», якщо щось рухається АБО вже чекає в черзі АБО триває пауза перед
-      // стартом наступного — інакше нове повідомлення обжене чергу під час паузи.
-      if (playing || queue.length || queueTimer != null) { queue.push(text); return; }
-      playMotion(text);
+      const wasEmpty = !hasContent;
+      appendMessage(text);
+      hasContent = true;
+      applyMotionFont();
+      if (prefersReducedMotion()) {
+        animating = false;
+        liveEl.style.animation = "none";
+        liveEl.style.transform = "";
+        return;
+      }
+      animating = true;
+      setMotionAnim(!wasEmpty); // перше повідомлення — старт з-за екрана; наступні — продовжити рух
     },
 
     setMode(m) {
       m = m || DEFAULT_MODE;
       if (m === mode) return;
       mode = m;
-      if (isMotion()) { clearQueueTimer(); queue = []; current = ""; playing = false; } // нова сесія показу
+      if (isMotion()) { liveEl.textContent = ""; hasContent = false; animating = false; } // нова сесія показу
       render();
     },
     setSpeed(s) {
       speed = s || DEFAULT_SPEED;
-      // На льоту змінюємо темп лише активного руху; застигле повідомлення стоїть.
-      if (isMotion() && playing) setMotionAnim(true);
+      // На льоту змінюємо темп лише активного руху; застигле чекає наступного повідомлення.
+      if (isMotion() && animating) setMotionAnim(true);
     },
     refresh() {
       if (isMotion()) {
         applyMotionFont();
-        if (playing) setMotionAnim(true); // рух триває — продовжити з поточної позиції
-        else restStatic();                // застигле — оновити позицію під новий розмір
+        if (animating) setMotionAnim(true); // рух триває — продовжити з поточної позиції
+        else restStatic();                  // застигле — оновити позицію під новий розмір
       } else if (mode === MODE_SCROLL) {
         // Зберегти позицію прокрутки при зміні розміру (текст лишається на місці).
         const prev = wrapEl.scrollHeight;
