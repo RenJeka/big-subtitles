@@ -15,6 +15,11 @@ import { connect, encode } from "./mqtt-client.js";
 import { initKey, encrypt } from "./crypto.js";
 import * as store from "./store.js";
 
+/**
+ * Initialize and bind the Sender UI, local state, and MQTT connection used to send live and committed messages and to push display settings.
+ *
+ * Sets up sender theme and display settings UI, validates and saves room/key (initializing encryption), opens the QR modal, connects to MQTT and ensures retained settings publishing, wires controls for size/mode/speed/theme, manages live debounced updates and commit/history flows, binds outside-panel closing and viewport adjustments for on-screen keyboards, and focuses the input field.
+ */
 export function init() {
   show("screen-sender");
 

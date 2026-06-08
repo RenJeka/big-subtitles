@@ -27,7 +27,15 @@ export function decode(raw) {
 // Підключитися до брокера. onMessage===null → лише публікація даних (Sender),
 // але presence-підписка діє завжди — обидві ролі стежать за присутністю партнера.
 // Зелене «з'єднано» = брокер + партнер на зв'язку; інакше «очікування пристрою…».
-// Повертає { client, topic, settingsTopic } або null, якщо бібліотека недоступна.
+/**
+ * Connects an MQTT client for the given room, manages presence with the peer, and subscribes to message and settings topics when a message handler is provided.
+ * @param {string} room - Room identifier appended to the topic prefix.
+ * @param {string} role - Local participant role (e.g., sender or display); determines peer role and presence topics.
+ * @param {(payload: string) => void|null} onMessage - Optional callback invoked with incoming payload strings from the main topic or settings topic; if falsy, message subscriptions are not created.
+ * @param {HTMLElement|null} statusEl - Optional DOM element used to display connection/status messages.
+ * @param {(connected: boolean) => void|undefined} onPeerConnectionChange - Optional callback called with `true` when a peer is detected online and `false` when offline.
+ * @returns {{ client: import("mqtt").MqttClient, topic: string, settingsTopic: string } | null} An object containing the MQTT client and the room's main and settings topics, or `null` if the MQTT library is not available.
+ */
 export function connect(room, role, onMessage, statusEl, onPeerConnectionChange) {
   if (typeof mqtt === "undefined") {
     setStatus(statusEl, "err", TEXT_STATUS_NO_MQTT);
