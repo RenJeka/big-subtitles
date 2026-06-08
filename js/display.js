@@ -2,7 +2,7 @@
 // Тема/розмір/банер делеговано в settings, автомасштаб — у fit-text.
 import {
   ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
-  TEXT_PLACEHOLDER, ROLE_DISPLAY, MODE_TELE, MODE_MARQUEE
+  TEXT_PLACEHOLDER, ROLE_DISPLAY, MODE_FIT, MODE_TELE, MODE_MARQUEE
 } from "./config.js";
 import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal, closeQrModal, bindOutsideClose, createHistory } from "./utils.js";
 import { connect, decode } from "./mqtt-client.js";
@@ -52,6 +52,12 @@ export function init() {
     return m === MODE_TELE || m === MODE_MARQUEE;
   }
 
+  // Режим, що показує live-набір (під час друку). Лише «Авто-розмір»: у «Прокрутці»
+  // текст з'являється тільки після «Відправити» (commit), у режимах руху — лише по commit.
+  function isLiveTypingMode() {
+    return settings.getMode() === MODE_FIT;
+  }
+
   function setLive(text) {
     lastText = text || "";
     if (text && text.length) {
@@ -99,8 +105,9 @@ export function init() {
           ignoreNextEmptyLive = true;
         }
       } else {
-        // live-текст (набір) — лише для fit/scroll; у режимах руху ігноруємо.
-        if (!isMotionMode()) {
+        // live-текст (набір) — лише для «Авто-розмір». У «Прокрутці» й режимах руху
+        // ігноруємо: там текст оновлюється тільки по commit («Відправити»).
+        if (isLiveTypingMode()) {
           const t = msg.text || "";
           if (t === "" && ignoreNextEmptyLive) {
             ignoreNextEmptyLive = false; // це порожній live після commit — показане лишаємо
