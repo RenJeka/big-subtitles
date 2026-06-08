@@ -5,7 +5,8 @@
 // Модель руху (tele/marquee) — ЧЕРГА атомарних повідомлень:
 //  • кожне повідомлення проходить рух РІВНО ОДИН раз (без зациклення);
 //  • нова відправка під час показу НЕ перериває поточну, а стає в чергу й
-//    програється після неї («додавати в кінець»);
+//    програється після неї («додавати в кінець»), але не миттєво по завершенню —
+//    старт наступного відкладається на MOTION_QUEUE_GAP_MS («дихання» між фразами);
 //  • коли черга порожня — останнє повідомлення ЗАСТИГАЄ видимим
 //    (animation-fill-mode: forwards тримає кінцевий кадр).
 //
@@ -16,7 +17,8 @@
 import {
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   TELE_PX_BASE, TELE_PX_STEP, MARQUEE_PX_BASE, MARQUEE_PX_STEP,
-  SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED
+  SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED,
+  MOTION_QUEUE_GAP_MS
 } from "./config.js";
 import { fit } from "./fit-text.js";
 
@@ -46,6 +48,11 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   let current = "";    // повідомлення, що зараз показується/застигло на екрані
   let queue = [];      // повідомлення, що чекають своєї черги (tele/marquee)
   let playing = false; // триває рух поточного повідомлення (ще не дограло)
+  let queueTimer = null; // відкладений старт наступного з черги (пауза між повідомленнями)
+
+  function clearQueueTimer() {
+    if (queueTimer != null) { clearTimeout(queueTimer); queueTimer = null; }
+  }
 
   function isMotion() { return mode === MODE_TELE || mode === MODE_MARQUEE; }
 
@@ -147,13 +154,18 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     setMotionAnim(false);
   }
 
-  // Поточне повідомлення дограло → взяти наступне з черги або застигнути на останньому.
+  // Поточне повідомлення дограло (без переривання) → застигнути на ньому, а наступне
+  // з черги почати не миттєво, а з невеликою паузою (MOTION_QUEUE_GAP_MS) — «дихання»
+  // між фразами, щоб глядач встиг усвідомити кінець попередньої перед стартом нової.
   function onMotionEnd() {
     if (!isMotion() || !playing) return;
+    playing = false; // поточне застигло (forwards тримає кадр) — і лишається, якщо черга порожня
     if (queue.length) {
-      playMotion(queue.shift());
-    } else {
-      playing = false; // черга порожня — останнє лишається видимим (forwards тримає кадр)
+      clearQueueTimer();
+      queueTimer = setTimeout(function () {
+        queueTimer = null;
+        if (isMotion() && !playing && queue.length) playMotion(queue.shift());
+      }, MOTION_QUEUE_GAP_MS);
     }
   }
   liveEl.addEventListener("animationend", onMotionEnd);
@@ -202,7 +214,9 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       if (!isMotion()) return;
       text = (text || "").replace(/\n+$/, "");
       if (!text.trim().length) return;
-      if (playing) { queue.push(text); return; }
+      // «Зайнято», якщо щось рухається АБО вже чекає в черзі АБО триває пауза перед
+      // стартом наступного — інакше нове повідомлення обжене чергу під час паузи.
+      if (playing || queue.length || queueTimer != null) { queue.push(text); return; }
       playMotion(text);
     },
 
@@ -210,7 +224,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       m = m || DEFAULT_MODE;
       if (m === mode) return;
       mode = m;
-      if (isMotion()) { queue = []; current = ""; playing = false; } // нова сесія показу
+      if (isMotion()) { clearQueueTimer(); queue = []; current = ""; playing = false; } // нова сесія показу
       render();
     },
     setSpeed(s) {
