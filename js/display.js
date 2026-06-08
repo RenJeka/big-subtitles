@@ -42,7 +42,7 @@ export function init() {
   const liveWrap = $("live-wrap");
 
   const liveView = createLiveView(liveEl, liveWrap, settings.getSize);
-  let lastText = ""; // останній live-текст (для fit/scroll; tele/marquee накопичує сам)
+  let lastText = ""; // останній live-текст (для fit/scroll; tele/marquee керує сам)
   // Після commit Sender шле порожній live (очищає retained-поле) — у fit/scroll ми лишаємо
   // відправлене повідомлення на екрані, тож наступний порожній live пропускаємо.
   let ignoreNextEmptyLive = false;
@@ -78,9 +78,9 @@ export function init() {
   }
 
   // Історія (DOM — джерело істини). Клік по рядку: у fit/scroll показуємо його як live,
-  // у режимах руху (суфлер/бігучка) — додаємо у безперервний потік (інакше клік був би no-op).
+  // у режимах руху (суфлер/бігучка) — показуємо як поточне атомарне повідомлення.
   const history = createHistory(historyEl, historyEmpty, (text) => {
-    if (isMotionMode()) liveView.appendLine(text);
+    if (isMotionMode()) liveView.showLine(text);
     else setLive(text);
     historyPanel.classList.remove("open");
   });
@@ -98,7 +98,7 @@ export function init() {
       } else if (msg.type === MSG_TYPE_COMMIT) {
         history.append(msg.text); // запис в історію лишається в усіх режимах
         if (isMotionMode()) {
-          liveView.appendLine(msg.text); // суфлер/бігучка: додати у безперервний потік
+          liveView.showLine(msg.text); // суфлер/бігучка: показати як окреме повідомлення
         } else {
           // fit/scroll: відправлене повідомлення лишається на екрані (не стираємо).
           setLive(msg.text);

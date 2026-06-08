@@ -9,8 +9,7 @@
 import {
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   TELE_PX_BASE, TELE_PX_STEP, MARQUEE_PX_BASE, MARQUEE_PX_STEP,
-  SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED,
-  MARQUEE_SEP, ACCUMULATE_MAX_CHARS
+  SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED
 } from "./config.js";
 import { fit } from "./fit-text.js";
 
@@ -33,7 +32,7 @@ function scrollFontPx(wrapEl, size) {
 export function createLiveView(liveEl, wrapEl, getSize) {
   let mode = DEFAULT_MODE;
   let speed = DEFAULT_SPEED;
-  let buffer = "";   // накопичений текст для tele/marquee
+  let message = "";   // поточне атомарне повідомлення для tele/marquee (одна відправка)
 
   function isMotion() { return mode === MODE_TELE || mode === MODE_MARQUEE; }
 
@@ -60,7 +59,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   // continueFromCurrent — продовжити з поточної позиції (зміна швидкості/розміру),
   // а не запускати з початку.
   function setMotionAnim(continueFromCurrent) {
-    if (!buffer) {                      // нема тексту — нема руху
+    if (!message) {                     // нема тексту — нема руху
       liveEl.style.animation = "none";
       liveEl.style.transform = "";
       return;
@@ -120,40 +119,29 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     } else if (mode === MODE_SCROLL) {
       applyMotionFont();
     } else {
-      // tele / marquee — показати накопичений буфер, рух веде CSS-анімація.
-      liveEl.textContent = buffer;
+      // tele / marquee — показати поточне повідомлення, рух веде CSS-анімація.
+      liveEl.textContent = message;
       applyMotionFont();
       setMotionAnim();
     }
   }
 
-  // Обрізати початок буфера по межі рядка/роздільника, якщо перевищено ліміт.
-  function trimLeading(buf) {
-    if (buf.length <= ACCUMULATE_MAX_CHARS) return buf;
-    let cut = buf.length - ACCUMULATE_MAX_CHARS;
-    const sep = (mode === MODE_MARQUEE) ? MARQUEE_SEP : "\n";
-    const idx = buf.indexOf(sep, cut);
-    if (idx !== -1) cut = idx + sep.length;
-    return buf.slice(cut);
-  }
-
   return {
     // fit/scroll: показ поточного (live) тексту під час набору.
     setText(text) {
-      if (isMotion()) return; // у режимах руху контент керується через appendLine
+      if (isMotion()) return; // у режимах руху контент керується через showLine
       liveEl.textContent = text;
       render();
     },
 
-    // tele/marquee: додати зафіксований рядок до потоку й переналаштувати CSS-анімацію.
-    appendLine(text) {
+    // tele/marquee: показати одну відправку як окреме атомарне повідомлення —
+    // нова відправка ЗАМІНЮЄ попередню (без накопичення), рух стартує з початку.
+    showLine(text) {
       if (!isMotion()) return;
       text = (text || "").replace(/\n+$/, "");
       if (!text.trim().length) return;
-      const sep = (mode === MODE_MARQUEE) ? MARQUEE_SEP : "\n";
-      buffer = buffer ? (buffer + sep + text) : text;
-      buffer = trimLeading(buffer);
-      liveEl.textContent = buffer;
+      message = text;
+      liveEl.textContent = message;
       applyMotionFont();
       setMotionAnim();
     },
@@ -162,7 +150,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       m = m || DEFAULT_MODE;
       if (m === mode) return;
       mode = m;
-      if (isMotion()) buffer = ""; // нова сесія накопичення
+      if (isMotion()) message = ""; // нова сесія показу — без попереднього повідомлення
       render();
     },
     setSpeed(s) {
