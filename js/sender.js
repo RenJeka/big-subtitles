@@ -2,8 +2,8 @@
 // Sender є «адміністратором» налаштувань Display: надсилає тему + розмір через MQTT.
 // Sender також має власну локальну тему (не синхронізується).
 import {
-  DEBOUNCE_MS, FOCUS_DELAY_MS,
-  MSG_TYPE_LIVE, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
+  FOCUS_DELAY_MS,
+  MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
   DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED,
   LS_SENDER_THEME, LS_PUSH_THEME, LS_SIZE, LS_MODE, LS_SPEED,
   SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP,
@@ -218,35 +218,21 @@ export function init() {
 
   // ===================== Введення тексту =====================
   const input = $("input");
-  let timer = null;
-
-  // Live надсилаємо завжди. Плавність суфлера/бігучки гарантує Display: у режимах руху
-  // він ІГНОРУЄ live й оновлює потік лише по commit (кнопка/Enter). Тож блокувати live
-  // на боці Sender не потрібно — інакше при розсинхроні режиму текст міг зовсім не йти.
-  function scheduleLive() {
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(() => publish(MSG_TYPE_LIVE, input.value, true), DEBOUNCE_MS);
-  }
-
-  input.addEventListener("input", scheduleLive);
 
   // Історія відправлених: клік по рядку повертає його в поле для повторної відправки.
   const history = createHistory($("sender-history"), $("sender-history-empty"), (text) => {
     input.value = text;
     $("sender-history-panel").classList.remove("open");
-    scheduleLive();
     input.focus();
   });
 
   function commitLine() {
     const line = input.value;
-    if (timer) { clearTimeout(timer); timer = null; }
     if (line.trim().length) {
       publish(MSG_TYPE_COMMIT, line, false);
       history.append(line);
     }
     input.value = "";
-    publish(MSG_TYPE_LIVE, "", true); // очистити retained live
     input.focus();
   }
 
@@ -262,8 +248,6 @@ export function init() {
 
   $("clear-btn").addEventListener("click", () => {
     input.value = "";
-    if (timer) { clearTimeout(timer); timer = null; }
-    publish(MSG_TYPE_LIVE, "", true);
     input.focus();
   });
 
