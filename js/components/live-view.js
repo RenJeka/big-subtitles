@@ -26,7 +26,7 @@
 import {
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   TELE_PX_BASE, TELE_PX_STEP, MARQUEE_PX_BASE, MARQUEE_PX_STEP,
-  SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED,
+  SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED, DEFAULT_LINEHEIGHT,
   MOTION_SCROLL_RESUME_MS
 } from "../config.js";
 import { fit } from "../utils/fit-text.js";
@@ -53,9 +53,15 @@ function scrollFontPx(wrapEl, size) {
  * @param {HTMLElement} wrapEl - #live-wrap container
  * @param {()=>number} getSize - returns current scale factor (SIZE_MIN..SIZE_MAX)
  */
+// Перетворює крок (1–30) у CSS-значення line-height.
+function lhValue(step) {
+  return 0.8 + (step - 1) * 0.05;
+}
+
 export function createLiveView(liveEl, wrapEl, getSize) {
-  let mode = DEFAULT_MODE;
-  let speed = DEFAULT_SPEED;
+  let mode            = DEFAULT_MODE;
+  let speed           = DEFAULT_SPEED;
+  let lineHeightStep  = DEFAULT_LINEHEIGHT;
   let hasContent = false; // чи є у потоці хоч одне повідомлення (.vs-msg)
   let animating = false;  // чи триває рух потоку до поточної кінцевої точки
   let scrubbing = false;  // користувач вручну скролить — авто-рух на паузі
@@ -296,6 +302,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
    */
   function render() {
     resetStyles();
+    liveEl.style.lineHeight = lhValue(lineHeightStep);
     ALL_MODE_CLASSES.forEach((c) => wrapEl.classList.remove(c));
     wrapEl.classList.add("mode-" + mode);
 
@@ -311,9 +318,25 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     }
   }
 
+  function doRefresh() {
+    if (isMotion()) {
+      applyMotionFont();
+      if (scrubbing) return;
+      if (animating) setMotionAnim(true);
+      else restStatic();
+    } else if (mode === MODE_SCROLL) {
+      const prev = wrapEl.scrollHeight;
+      const ratio = prev > 0 ? wrapEl.scrollTop / prev : 0;
+      render();
+      wrapEl.scrollTop = ratio * wrapEl.scrollHeight;
+    } else {
+      render();
+    }
+  }
+
   return {
     /**
-     * (fit/scroll) Replaces #live content with text and re-fits or re-renders. 
+     * (fit/scroll) Replaces #live content with text and re-fits or re-renders.
      * @param {string} text
      */
     setText(text) {
@@ -374,20 +397,17 @@ export function createLiveView(liveEl, wrapEl, getSize) {
 
     /** Re-applies layout for the current mode (called on resize, orientation change, or size change). */
     refresh() {
-      if (isMotion()) {
-        applyMotionFont();
-        if (scrubbing) return;              // ручний скрол — не чіпати позицію/overflow
-        if (animating) setMotionAnim(true); // рух триває — продовжити з поточної позиції
-        else restStatic();                  // застигле — оновити позицію під новий розмір
-      } else if (mode === MODE_SCROLL) {
-        // Зберегти позицію прокрутки при зміні розміру (текст лишається на місці).
-        const prev = wrapEl.scrollHeight;
-        const ratio = prev > 0 ? wrapEl.scrollTop / prev : 0;
-        render();
-        wrapEl.scrollTop = ratio * wrapEl.scrollHeight;
-      } else {
-        render(); // fit — перерахунок вписаного шрифту
-      }
+      doRefresh();
+    },
+
+    /**
+     * Updates line-height step and immediately re-applies layout.
+     * @param {number} step integer 1–30
+     */
+    setLineHeight(step) {
+      lineHeightStep = step || DEFAULT_LINEHEIGHT;
+      liveEl.style.lineHeight = lhValue(lineHeightStep);
+      doRefresh();
     }
   };
 }
