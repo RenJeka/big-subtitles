@@ -87,6 +87,39 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       return (!t || t === "none") ? "none" : t.replace(/\s+/g, "");
     } catch (e) { return "ERR:" + e; }
   }
+  // ТИМЧАСОВО (діагностика): неперервний семпл реальної позиції під час руху.
+  // Ловить стопор МІЖ повідомленнями — якщо computed завмре, а analytic поповзе далі,
+  // diff почне зростати (ось він баг). ~120 мс крок, щоб не спамити кожен кадр.
+  // Покадровий семплер: логуємо НЕ кожен кадр (щоб не спамити), а лише аномалії —
+  // коли рух ЗАВМЕР (позиція не змінюється два кадри поспіль) або ВІДХИЛИВСЯ від
+  // аналітичної моделі (|computed−analytic|>DRIFT). Плюс рідкісний heartbeat, щоб
+  // бачити, що рух узагалі живий. frames рахує реальну частоту кадрів між подіями.
+  const DRIFT_PX = 6;
+  let rafId = 0, hbT = 0, prevC = null, frames = 0, stuckRun = 0;
+  function tickLoop() {
+    if (!animating) { rafId = 0; return; }
+    frames++;
+    const t = nowMs();
+    const c = readTranslate();
+    const a = analyticOffset();
+    const stuck = (prevC != null && c != null && Math.abs(c - prevC) < 0.01);
+    const drift = (c != null && a != null && Math.abs(c - a) > DRIFT_PX);
+    if (stuck) stuckRun++; else stuckRun = 0;
+    // Логуємо: початок завмирання (2-й однаковий кадр), будь-яке відхилення, або heartbeat.
+    if (stuckRun === 2 || drift || (t - hbT >= 500)) {
+      hbT = t;
+      logEvent(stuck ? "tick-STUCK" : (drift ? "tick-DRIFT" : "tick"), {
+        computed: c == null ? "null" : c,
+        analytic: a == null ? "null" : a,
+        diff: (c != null && a != null) ? (c - a) : "n/a",
+        stuckFrames: stuckRun, frames: frames
+      });
+    }
+    prevC = c;
+    rafId = requestAnimationFrame(tickLoop);
+  }
+  function startTick() { if (!rafId) { hbT = 0; prevC = null; frames = 0; stuckRun = 0; rafId = requestAnimationFrame(tickLoop); } }
+  function stopTick() { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } }
 
   /** @returns {boolean} true when current mode produces continuous stream motion */
   function isMotion() { return mode === MODE_TELE || mode === MODE_MARQUEE; }
@@ -141,6 +174,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     liveEl.style.animation = "none";
     liveEl.style.transform = hasContent ? axisTransform(motionEndpoints().to) : "";
     animDurMs = 0; // ТИМЧАСОВО: зупиняємо аналітичний відлік
+    stopTick();
     logEvent("restStatic", { hasContent: hasContent, to: hasContent ? motionEndpoints().to : "" });
   }
 
@@ -216,6 +250,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       sW: liveEl.scrollWidth, cW: wrapEl.clientWidth,
       kids: liveEl.children.length, speed: speed
     });
+    startTick(); // ТИМЧАСОВО: почати неперервний семпл позиції
   }
 
   /**
@@ -276,6 +311,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   function enterScrub() {
     const tx = readTranslate();
     logEvent("enterScrub", { tx: tx == null ? "null" : tx, analytic: analyticOffset() });
+    stopTick();
     animating = false;
     scrubbing = true;
     liveEl.style.animation = "none";
@@ -437,6 +473,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       if (scrubbing) return;
       if (prefersReducedMotion()) {
         animating = false;
+        stopTick();
         liveEl.style.animation = "none";
         liveEl.style.transform = "";
         return;

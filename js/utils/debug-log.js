@@ -1,6 +1,7 @@
 // ТИМЧАСОВИЙ діагностичний логер: дослідження бага «стопору» анімації суфлера/бігучки
 // на iPad Air 2 / Safari 15. Кільцевий буфер подій + dumpLog() у текст для копіювання.
 // Прибрати разом з інструментуванням у live-view.js після фіксу.
+const BUILD = "diag-3 (tick+anomaly)"; // маркер версії: видно в шапці логу, що код свіжий
 const MAX = 1000;
 const buf = [];
 
@@ -28,6 +29,7 @@ export function clearLog() {
 function envHeader() {
   const lines = [];
   lines.push("=== big-subtitles debug log ===");
+  lines.push("build:    " + BUILD);
   lines.push("when:     " + new Date().toISOString());
   lines.push("ua:       " + (navigator.userAgent || "?"));
   lines.push("viewport: " + window.innerWidth + "x" + window.innerHeight +
