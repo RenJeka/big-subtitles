@@ -6,12 +6,15 @@ export function fit(el, container, scale) {
   const text = el.textContent;
   if (!text) { el.style.fontSize = ""; return; }
   scale = scale || 1;
-  const max = Math.floor(container.clientHeight * FIT_HEIGHT_RATIO * scale);
+  const cs = getComputedStyle(container);
+  const availH = container.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const availW = container.clientWidth  - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const max = Math.floor(availH * FIT_HEIGHT_RATIO * scale);
   let lo = FIT_MIN_FONT_PX, hi = Math.max(FIT_MIN_FONT_PX, max), best = FIT_MIN_FONT_PX;
   for (let step = 0; step < FIT_MAX_STEPS && lo <= hi; step++) {
     const mid = Math.floor((lo + hi) / 2);
     el.style.fontSize = mid + "px";
-    if (el.scrollHeight <= container.clientHeight && el.scrollWidth <= container.clientWidth) {
+    if (el.scrollHeight <= availH && el.scrollWidth <= availW) {
       best = mid; lo = mid + 1;
     } else {
       hi = mid - 1;

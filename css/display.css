@@ -113,6 +113,7 @@
   position: relative;
   z-index: 1;
   font-weight: 700;
+  color: var(--fg);
   line-height: 1.1;
   /* font-family: Arial, Helvetica, sans-serif; */
   text-align: center;
@@ -122,9 +123,8 @@
   max-width: 100%;
 }
 
-#live.placeholder {
-  color: var(--fg);
-  font-weight: 700;
+#live-wrap.mode-fit #live {
+  overflow-wrap: normal;
 }
 
 /* ---------- Режими показу live-тексту ---------- */
