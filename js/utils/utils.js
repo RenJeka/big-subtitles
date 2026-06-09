@@ -1,5 +1,5 @@
 // Дрібні хелпери: DOM, генерація токена, парсинг URL, кімната, статус, QR-модал, доступність.
-import { LS_ROOM, LS_KEY, TOKEN_ALPHABET, TOKEN_LENGTH, QR_SIZE, QR_CORRECT_LEVEL, TEXT_QR_UNAVAILABLE, HISTORY_LIMIT } from "./config.js";
+import { LS_ROOM, LS_KEY, TOKEN_ALPHABET, TOKEN_LENGTH, QR_SIZE, QR_CORRECT_LEVEL, TEXT_QR_UNAVAILABLE, HISTORY_LIMIT } from "../config.js";
 import * as store from "./store.js";
 
 /**

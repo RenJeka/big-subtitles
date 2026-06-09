@@ -1,5 +1,5 @@
 // Автомасштаб тексту: підбирає найбільший розмір шрифту, що вміщається в доступній площі.
-import { FIT_MIN_FONT_PX, FIT_HEIGHT_RATIO, FIT_MAX_STEPS } from "./config.js";
+import { FIT_MIN_FONT_PX, FIT_HEIGHT_RATIO, FIT_MAX_STEPS } from "../config.js";
 
 // Бінарний пошук розміру: el вписується в availW × availH з урахуванням scale (0..1).
 // Caller відповідає за передачу вже вирахуваних розмірів (без padding контейнера).

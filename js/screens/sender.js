@@ -9,11 +9,11 @@ import {
   SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP,
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   ROLE_SENDER
-} from "./config.js";
-import { $, show, resolveRoom, saveRoom, resolveKey, saveKey, setStatus, initQrModal, openQrModal, bindOutsideClose, createHistory, highlightModeButtons } from "./utils.js";
-import { connect, encode } from "./mqtt-client.js";
-import { initKey, encrypt } from "./crypto.js";
-import * as store from "./store.js";
+} from "../config.js";
+import { $, show, resolveRoom, saveRoom, resolveKey, saveKey, setStatus, initQrModal, openQrModal, bindOutsideClose, createHistory, highlightModeButtons } from "../utils/utils.js";
+import { connect, encode } from "../utils/mqtt-client.js";
+import { initKey, encrypt } from "../utils/crypto.js";
+import * as store from "../utils/store.js";
 
 const MODE_BTN_IDS = {
   [MODE_FIT]:     "sender-mode-fit",

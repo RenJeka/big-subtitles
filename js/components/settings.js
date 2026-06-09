@@ -4,9 +4,9 @@ import {
   DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED,
   SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP,
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE
-} from "./config.js";
-import * as store from "./store.js";
-import { $, highlightModeButtons } from "./utils.js";
+} from "../config.js";
+import * as store from "../utils/store.js";
+import { $, highlightModeButtons } from "../utils/utils.js";
 
 let currentSize  = 1;
 let currentMode  = DEFAULT_MODE;

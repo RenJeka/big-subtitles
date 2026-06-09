@@ -3,12 +3,12 @@
 import {
   ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
   TEXT_PLACEHOLDER, ROLE_DISPLAY, MODE_TELE, MODE_MARQUEE
-} from "./config.js";
-import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal, closeQrModal, bindOutsideClose, createHistory } from "./utils.js";
-import { connect, decode } from "./mqtt-client.js";
-import { makeKeyB64, initKey, decrypt } from "./crypto.js";
-import { createLiveView } from "./live-view.js";
-import * as settings from "./settings.js";
+} from "../config.js";
+import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal, closeQrModal, bindOutsideClose, createHistory } from "../utils/utils.js";
+import { connect, decode } from "../utils/mqtt-client.js";
+import { makeKeyB64, initKey, decrypt } from "../utils/crypto.js";
+import { createLiveView } from "../components/live-view.js";
+import * as settings from "../components/settings.js";
 
 function isMotionMode() {
   const m = settings.getMode();

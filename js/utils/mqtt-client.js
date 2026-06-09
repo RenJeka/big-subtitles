@@ -7,7 +7,7 @@ import {
   PRESENCE_INFIX, PRESENCE_ONLINE, PRESENCE_OFFLINE, SETTINGS_INFIX,
   TEXT_STATUS_CONNECTED, TEXT_STATUS_WAITING, TEXT_STATUS_RECONNECT,
   TEXT_STATUS_OFFLINE, TEXT_STATUS_CLOSED, TEXT_STATUS_ERROR, TEXT_STATUS_NO_MQTT
-} from "./config.js";
+} from "../config.js";
 import { setStatus } from "./utils.js";
 
 // Протокол повідомлень у темі velyki/<room>:

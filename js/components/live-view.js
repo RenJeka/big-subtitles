@@ -28,9 +28,9 @@ import {
   TELE_PX_BASE, TELE_PX_STEP, MARQUEE_PX_BASE, MARQUEE_PX_STEP,
   SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED,
   MOTION_SCROLL_RESUME_MS
-} from "./config.js";
-import { fit } from "./fit-text.js";
-import { innerSize, prefersReducedMotion } from "./utils.js";
+} from "../config.js";
+import { fit } from "../utils/fit-text.js";
+import { innerSize, prefersReducedMotion } from "../utils/utils.js";
 
 const ALL_MODE_CLASSES = ["mode-fit", "mode-scroll", "mode-tele", "mode-marquee"];
 

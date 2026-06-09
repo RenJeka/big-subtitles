@@ -70,19 +70,23 @@ css/
   sender.css            # режим Sender: поле вводу, кнопки дій
   qr-modal.css          # спільний модал парування з QR
 js/
+  app.js                # точка входу (type=module): визначає режим за ?role= → boot()
   config.js             # усі константи: брокер, presence, ключі localStorage, шифрування,
                         # режими/швидкості, ліміти, ролі, типи повідомлень,
                         # параметри fit-text/QR, UI-тексти, defaults
-  store.js              # безпечна обгортка над localStorage (get/set)
-  utils.js              # хелпери DOM (innerSize, prefersReducedMotion), URL, генерація токена, статус
-  crypto.js             # E2E-шифрування payload (AES-GCM): makeKeyB64/initKey/encrypt/decrypt
-  fit-text.js           # автомасштаб тексту (бінарний пошук розміру)
-  live-view.js          # контролер показу live-тексту за режимом (fit/scroll/суфлер/бігучка)
-  mqtt-client.js        # транспорт MQTT по WebSocket + протокол + presence (connect/encode/decode)
-  settings.js           # тема, розмір, режим показу, швидкість, шестірня, банер автоблокування
-  display.js            # режим Display: live-текст, історія, QR (init)
-  sender.js             # режим Sender: textarea, Enter-commit, синхронізація налаштувань (init)
-  app.js                # точка входу (type=module): визначає режим за ?role= → boot()
+  screens/
+    display.js          # режим Display: live-текст, історія, QR (init)
+    sender.js           # режим Sender: textarea, Enter-commit, синхронізація налаштувань (init)
+  components/
+    settings.js         # тема, розмір, режим показу, швидкість, шестірня, банер автоблокування
+    live-view.js        # контролер показу live-тексту за режимом (fit/scroll/суфлер/бігучка)
+  utils/
+    utils.js            # хелпери DOM (innerSize, prefersReducedMotion), URL, генерація токена, статус
+    store.js            # безпечна обгортка над localStorage (get/set)
+    crypto.js           # E2E-шифрування payload (AES-GCM): makeKeyB64/initKey/encrypt/decrypt
+    fit-text.js         # автомасштаб тексту (бінарний пошук розміру)
+    mqtt-client.js      # транспорт MQTT по WebSocket + протокол + presence (connect/encode/decode)
+  vendor/               # self-host MQTT.js і qrcodejs (версії — js/vendor/README.md)
 spec-velyki-slova-mvp.md # вихідна специфікація MVP
 ```
 
