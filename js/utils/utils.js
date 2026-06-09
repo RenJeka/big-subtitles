@@ -1,5 +1,5 @@
-// Дрібні хелпери: DOM, генерація токена, парсинг URL, кімната, статус, QR-модал.
-import { LS_ROOM, LS_KEY, TOKEN_ALPHABET, TOKEN_LENGTH, QR_SIZE, QR_CORRECT_LEVEL, TEXT_QR_UNAVAILABLE, HISTORY_LIMIT } from "./config.js";
+// Дрібні хелпери: DOM, генерація токена, парсинг URL, кімната, статус, QR-модал, доступність.
+import { LS_ROOM, LS_KEY, TOKEN_ALPHABET, TOKEN_LENGTH, QR_SIZE, QR_CORRECT_LEVEL, TEXT_QR_UNAVAILABLE, HISTORY_LIMIT } from "../config.js";
 import * as store from "./store.js";
 
 /**
@@ -13,6 +13,20 @@ export function show(screenId) {
   const screens = document.querySelectorAll(".screen");
   for (let i = 0; i < screens.length; i++) screens[i].classList.remove("active");
   $(screenId).classList.add("active");
+}
+
+// Внутрішній розмір елемента без CSS-padding: { w, h } у пікселях.
+export function innerSize(el) {
+  const s = getComputedStyle(el);
+  return {
+    w: el.clientWidth  - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight),
+    h: el.clientHeight - parseFloat(s.paddingTop)  - parseFloat(s.paddingBottom)
+  };
+}
+
+// Чи увімкнено «reduce motion» в системних налаштуваннях.
+export function prefersReducedMotion() {
+  return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
 
 // Випадковий токен кімнати (base62, довжина TOKEN_LENGTH — єдиний «секрет» парування).

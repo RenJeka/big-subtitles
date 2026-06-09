@@ -51,25 +51,25 @@ py -m http.server 8000        # або: npx http-server -p 8000
 **ES-модулі, явні `import`/`export`** (namespace-патерну `window.VS` більше немає). Шар залежностей:
 
 - `config.js` — **усі** константи: брокер, тема MQTT, presence, ключі localStorage,
-  параметри шифрування (`KEY_BYTES`/`IV_BYTES`), ліміти, debounce, ролі, типи повідомлень
+  параметри шифрування (`KEY_BYTES`/`IV_BYTES`), ліміти, ролі, типи повідомлень
   протоколу, режими показу та швидкості, параметри fit-text/QR, UI-тексти й значення за
   замовчуванням. Жодних «магічних» чисел чи рядків у решті модулів.
-- `store.js` — безпечна обгортка над localStorage (`get/set` з fallback).
-- `utils.js` — DOM (`$`, `show`), `makeToken` (24-симв. base62 через `crypto`), парсинг URL,
+- `utils/store.js` — безпечна обгортка над localStorage (`get/set` з fallback).
+- `utils/utils.js` — DOM (`$`, `show`, `innerSize`, `prefersReducedMotion`), `makeToken` (24-симв. base62 через `crypto`), парсинг URL,
   `resolveRoom`/`saveRoom`, `setStatus`.
-- `crypto.js` — **E2E-шифрування payload** (AES-GCM 256-біт через Web Crypto). Уся
+- `utils/crypto.js` — **E2E-шифрування payload** (AES-GCM 256-біт через Web Crypto). Уся
   криптологіка ізольована тут: `makeKeyB64`/`initKey`/`encrypt`/`decrypt`. Текст шифрується
   у браузері перед публікацією; ключ ніколи не йде на брокер.
-- `fit-text.js` — `fit()`: бінарний пошук найбільшого шрифту, що вміщається у контейнер.
-- `live-view.js` — `createLiveView()`: контролер показу live-тексту за режимом
-  (fit/scroll/tele/marquee). Авто-рух суфлера/бігучки — **чиста CSS-анімація** (без JS у
-  циклі): JS лише раз на зміну контенту вимірює геометрію й задає CSS-змінні `--vs-*`.
-- `mqtt-client.js` — `connect/encode/decode` + presence (LWT/retained-маркери). **Уся
+- `utils/fit-text.js` — `fit()`: бінарний пошук найбільшого шрифту, що вміщається у контейнер.
+- `utils/mqtt-client.js` — `connect/encode/decode` + presence (LWT/retained-маркери). **Уся
   MQTT-специфіка ізольована тут**: заміна транспорту (власний брокер/Firebase у v2) має не
   виходити за цей файл.
-- `settings.js` — тема, розмір, режим показу, швидкість, шестірня, банер автоблокування;
+- `components/live-view.js` — `createLiveView()`: контролер показу live-тексту за режимом
+  (fit/scroll/tele/marquee). Авто-рух суфлера/бігучки — **чиста CSS-анімація** (без JS у
+  циклі): JS лише раз на зміну контенту вимірює геометрію й задає CSS-змінні `--vs-*`.
+- `components/settings.js` — тема, розмір, режим показу, швидкість, шестірня, банер автоблокування;
   `init(hooks)` приймає колбеки `onSizeChange`/`onModeChange`/`onSpeedChange`/`onShowQr`.
-- `display.js` / `sender.js` — режими, кожен експортує `init()`. Sender також синхронізує
+- `screens/display.js` / `screens/sender.js` — режими, кожен експортує `init()`. Sender також синхронізує
   налаштування на Display через повідомлення `settings`.
 - `app.js` — точка входу, `boot()`.
 
@@ -81,8 +81,6 @@ py -m http.server 8000        # або: npx http-server -p 8000
 
 **Протокол** (тема `velyki/<room>`, payload — base64url(iv)+`.`+ciphertext від AES-GCM
 над JSON):
-- `{ "type":"live", "text":"…" }` — поточний рядок, publish при кожній зміні з `retain:true`
-  (debounce у sender ~150 мс; `retain` дає останній рядок тому, хто приєднався пізніше).
 - `{ "type":"commit", "text":"…" }` — Enter у sender: рядок іде в історію Display, без retain.
 - `{ "type":"settings", "size", "displayTheme", "mode", "speed" }` — Sender керує показом на
   Display. Publish з `retain:true` в **окрему тему `velyki/<room>/settings`** (не в тему

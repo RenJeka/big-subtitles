@@ -3,7 +3,7 @@
 // дешифрується у браузері на іншому боці. Ключ ніколи не йде на сервер.
 // Сумісність із Safari 15: лише нативний Web Crypto (crypto.subtle,
 // crypto.getRandomValues, btoa/atob); без generateKey/exportKey і top-level await.
-import { KEY_BYTES, IV_BYTES, PAYLOAD_SEP } from "./config.js";
+import { KEY_BYTES, IV_BYTES, PAYLOAD_SEP } from "../config.js";
 
 // ===================== base64url ↔ байти =====================
 // Без padding, url-safe алфавіт (-/_) — безпечно для будь-якого транспорту.

@@ -28,29 +28,31 @@ import {
   TELE_PX_BASE, TELE_PX_STEP, MARQUEE_PX_BASE, MARQUEE_PX_STEP,
   SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED,
   MOTION_SCROLL_RESUME_MS
-} from "./config.js";
-import { fit } from "./fit-text.js";
+} from "../config.js";
+import { fit } from "../utils/fit-text.js";
+import { innerSize, prefersReducedMotion } from "../utils/utils.js";
 
 const ALL_MODE_CLASSES = ["mode-fit", "mode-scroll", "mode-tele", "mode-marquee"];
 
-// Рівень швидкості → px/сек для відповідного режиму.
+// px/с для заданого режиму та рівня швидкості.
 function pxPerSec(mode, speed) {
   if (mode === MODE_MARQUEE) return MARQUEE_PX_BASE + (speed - 1) * MARQUEE_PX_STEP;
   return TELE_PX_BASE + (speed - 1) * TELE_PX_STEP;
 }
 
-// Фіксований розмір шрифту для scroll/tele/marquee від налаштування розміру.
+// Розмір шрифту (px) для scroll/tele/marquee залежно від розміру контейнера і scale.
 function scrollFontPx(wrapEl, size) {
   const base = Math.min(wrapEl.clientWidth, wrapEl.clientHeight);
   return Math.max(FIT_MIN_FONT_PX, Math.round(size * SCROLL_FONT_RATIO * base));
 }
 
-function prefersReducedMotion() {
-  return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-}
-
-// liveEl — елемент тексту (#live); wrapEl — контейнер (#live-wrap);
-// getSize — функція, що повертає поточний масштаб (SIZE_MIN..SIZE_MAX).
+/**
+ * Creates and returns a live-view controller that renders committed text on #live
+ * according to the active mode (fit / scroll / tele / marquee).
+ * @param {HTMLElement} liveEl - #live text element
+ * @param {HTMLElement} wrapEl - #live-wrap container
+ * @param {()=>number} getSize - returns current scale factor (SIZE_MIN..SIZE_MAX)
+ */
 export function createLiveView(liveEl, wrapEl, getSize) {
   let mode = DEFAULT_MODE;
   let speed = DEFAULT_SPEED;
@@ -59,16 +61,19 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   let scrubbing = false;  // користувач вручну скролить — авто-рух на паузі
   let resumeTimer = null; // таймер відновлення авто-руху після бездіяльності
 
+  /** @returns {boolean} true when current mode produces continuous stream motion */
   function isMotion() { return mode === MODE_TELE || mode === MODE_MARQUEE; }
 
+  /** Sets #live font-size for motion modes based on container dimensions and scale. */
   function applyMotionFont() {
     liveEl.style.fontSize = scrollFontPx(wrapEl, getSize()) + "px";
   }
 
-  // Геометрія руху для поточного СУМАРНОГО вмісту потоку: вхід з-за межі екрана
-  // (from) до кінцевої ВИДИМОЇ позиції (to), де останній (найновіший) блок
-  // повністю видимий. Якщо потік коротший за екран — застигає вирівняним
-  // до початку (to=0); якщо довший — видно «хвіст» із найновішим повідомленням.
+  /**
+   * Returns animation endpoints for the current stream: stream enters from off-screen
+   * (from) and stops when the newest block is fully visible (to=0 if stream fits, else negative).
+   * @returns {{from:number, to:number, distance:number}} offsets in px along the motion axis
+   */
   function motionEndpoints() {
     let from, to;
     if (mode === MODE_MARQUEE) {
@@ -81,14 +86,18 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     return { from: from, to: to, distance: from - to };
   }
 
+  /** @param {number} px @returns {string} CSS translate3d along the motion axis (Y for tele, X for marquee) */
   function axisTransform(px) {
     return (mode === MODE_MARQUEE)
       ? "translate3d(" + px + "px,0,0)"
       : "translate3d(0," + px + "px,0)";
   }
 
-  // Поточний зсув #live (px) із матриці трансформації — щоб продовжити рух без
-  // стрибка при додаванні нового повідомлення / зміні швидкості/розміру.
+  /**
+   * Reads the current #live transform offset from the computed matrix so animation
+   * can resume from the current position without a visible jump.
+   * @returns {number|null} translate px along the motion axis, or null if no transform is active
+   */
   function readTranslate() {
     const t = getComputedStyle(liveEl).transform;
     if (!t || t === "none") return null;
@@ -100,17 +109,18 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     return (mode === MODE_MARQUEE) ? v[4] : v[5]; // matrix(a,b,c,d,tx,ty)
   }
 
-  // Тримати потік застиглим у кінцевій (видимій) позиції — без анімації.
+  /** Cancels animation and holds #live at the final visible position (no motion). */
   function restStatic() {
     liveEl.style.animation = "none";
     liveEl.style.transform = hasContent ? axisTransform(motionEndpoints().to) : "";
   }
 
-  // Налаштувати CSS-анімацію руху під поточний СУМАРНИЙ вміст потоку й швидкість.
-  // ЄДИНЕ місце, де читаємо layout (scrollHeight/scrollWidth) — і лише на ЗМІНУ
-  // вмісту/розміру/швидкості, а не щокадрово. Далі рух веде CSS сам.
-  // continueFromCurrent — продовжити з поточної позиції (нове повідомлення подовжило
-  // потік / змінилась швидкість/розмір), а не запускати з початку.
+  /**
+   * Configures and (re)starts the CSS keyframe animation so the stream scrolls at
+   * constant px/s to its new endpoint. Uses a negative animation-delay to resume
+   * from the current position when continueFromCurrent is true, avoiding jumps.
+   * @param {boolean} continueFromCurrent - true to resume mid-stream; false to start from off-screen
+   */
   function setMotionAnim(continueFromCurrent) {
     if (!hasContent) {                  // нема тексту — нема руху
       liveEl.style.animation = "none";
@@ -152,9 +162,11 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     liveEl.style.animation = name + " " + dur + "s linear " + delay + "s 1 forwards";
   }
 
-  // Рух дограв до поточної кінцевої точки → застигнути на ній (forwards тримає кадр).
-  // Якщо тим часом надійшло нове повідомлення, рух уже продовжено далі раніше —
-  // ця стара анімація завершується через animationcancel, а не animationend.
+  /**
+   * animationend handler: marks stream as no longer animating and freezes it at endpoint.
+   * If a new message arrived mid-flight the old animation fires animationcancel instead,
+   * so this handler is already superseded in that case.
+   */
   function onMotionEnd() {
     if (!isMotion() || !animating) return;
     animating = false;
@@ -164,20 +176,24 @@ export function createLiveView(liveEl, wrapEl, getSize) {
 
   // ---- Ручний скрол назад + автопауза/автовідновлення ----
 
-  // Чи є що скролити (потік довший за екран по осі руху).
+  /** @returns {boolean} true when the stream is longer than the visible area along the motion axis */
   function hasOverflow() {
     return (mode === MODE_MARQUEE)
       ? liveEl.scrollWidth > wrapEl.clientWidth
       : liveEl.scrollHeight > wrapEl.clientHeight;
   }
 
-  // Поточна scroll-позиція по осі руху.
+  /** @returns {number} current scroll offset of wrapEl along the motion axis */
   function readScroll() {
     return (mode === MODE_MARQUEE) ? wrapEl.scrollLeft : wrapEl.scrollTop;
   }
+
+  /** @param {number} px Sets wrapEl scroll offset along the motion axis. */
   function writeScroll(px) {
     if (mode === MODE_MARQUEE) wrapEl.scrollLeft = px; else wrapEl.scrollTop = px;
   }
+
+  /** @param {boolean} on Enables or disables native overflow-scroll on wrapEl along the motion axis. */
   function setWrapScrollable(on) {
     if (mode === MODE_MARQUEE) {
       wrapEl.style.overflowX = on ? "auto" : "hidden";
@@ -187,8 +203,11 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     wrapEl.style.webkitOverflowScrolling = on ? "touch" : "";
   }
 
-  // Увійти в ручний скрол: застигнути анімацію й перевести позицію в нативний скрол.
-  // Координата вмісту під верхньою/лівою межею = -tx (при русі) = scroll (при скролі).
+  /**
+   * Transitions from CSS animation to native scroll for manual scrubbing.
+   * Converts the current transform offset (−tx) to an equivalent scrollTop/Left so
+   * the visible position does not jump when the user starts swiping back.
+   */
   function enterScrub() {
     const tx = readTranslate();
     animating = false;
@@ -199,15 +218,21 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     writeScroll(Math.max(0, tx == null ? 0 : -tx));
   }
 
+  /** Resets (or starts) the inactivity timer that will restore auto-motion after scrubbing ends. */
   function armResumeTimer() {
     if (resumeTimer) clearTimeout(resumeTimer);
     resumeTimer = setTimeout(resume, MOTION_SCROLL_RESUME_MS);
   }
+
+  /** Cancels the pending auto-resume timer. */
   function clearResumeTimer() {
     if (resumeTimer) { clearTimeout(resumeTimer); resumeTimer = null; }
   }
 
-  // Відновити авто-рух із поточної scroll-позиції (зворотна конвертація → transform).
+  /**
+   * Converts the current native scroll position back to a CSS transform and
+   * restarts animation from that position, resuming auto-motion after scrubbing ends.
+   */
   function resume() {
     clearResumeTimer();
     if (!scrubbing) return;
@@ -225,13 +250,14 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     setMotionAnim(true);
   }
 
-  // Старт жесту скролу (touch/колесо): спинити рух і завести таймер відновлення.
+  /** touchstart/wheel handler: pauses auto-motion and arms the resume timer. */
   function onScrollIntent() {
     if (!isMotion() || prefersReducedMotion() || !hasContent || !hasOverflow()) return;
     if (!scrubbing) enterScrub();
     armResumeTimer();
   }
-  // Продовження скролу (зокрема інерційний скрол iOS без touch-подій) — тримати паузу.
+
+  /** touchmove/scroll handler: resets the resume timer to sustain the pause during inertial scroll. */
   function onScrollMove() {
     if (scrubbing) armResumeTimer();
   }
@@ -240,7 +266,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   wrapEl.addEventListener("touchmove", onScrollMove, { passive: true });
   wrapEl.addEventListener("scroll", onScrollMove, { passive: true });
 
-  // Додати окремий видимий блок повідомлення в кінець потоку показу.
+  /** @param {string} text Appends a .vs-msg div with text to the end of the motion stream. */
   function appendMessage(text) {
     const el = document.createElement("div");
     el.className = "vs-msg";
@@ -248,7 +274,9 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     liveEl.appendChild(el);
   }
 
-  // Скинути всі inline-стилі/змінні, які виставляли різні режими.
+  /**
+   * Resets all inline styles and CSS custom properties written by any display mode.
+   */
   function resetStyles() {
     liveEl.style.fontSize = "";
     liveEl.style.transform = "";
@@ -263,13 +291,17 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     wrapEl.scrollLeft = 0;
   }
 
+  /**
+   * Resets DOM state, applies the current mode class, and initialises mode-specific layout.
+   */
   function render() {
     resetStyles();
     ALL_MODE_CLASSES.forEach((c) => wrapEl.classList.remove(c));
     wrapEl.classList.add("mode-" + mode);
 
     if (mode === MODE_FIT) {
-      fit(liveEl, wrapEl, getSize());
+      const { w, h } = innerSize(wrapEl);
+      fit(liveEl, w, h, getSize());
     } else if (mode === MODE_SCROLL) {
       applyMotionFont();
     } else {
@@ -280,17 +312,21 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   }
 
   return {
-    // fit/scroll: показ поточного (live) тексту під час набору.
+    /**
+     * (fit/scroll) Replaces #live content with text and re-fits or re-renders. 
+     * @param {string} text
+     */
     setText(text) {
       if (isMotion()) return; // у режимах руху контент керується через showLine
       liveEl.textContent = text;
       render();
     },
 
-    // tele/marquee: додати одну відправку в кінець безперервного потоку показу.
-    // Потік рухається в одному напрямку; нове повідомлення наздоганяє попереднє,
-    // НЕ перериваючи його руху — обидва можуть бути видимі одночасно (як стрічка
-    // чату/новин). Коли потік порожній — старт іде з-за межі екрана.
+    /**
+     * (tele/marquee) Appends one committed message as a new stream block and
+     * starts or continues motion toward the new endpoint.
+     * @param {string} text
+     */
     showLine(text) {
       if (!isMotion()) return;
       text = (text || "").replace(/\n+$/, "");
@@ -312,6 +348,10 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       setMotionAnim(!wasEmpty); // перше повідомлення — старт з-за екрана; наступні — продовжити рух
     },
 
+    /** 
+     * Switches to mode m; resets stream for motion modes and re-renders. 
+     * @param {string} m 
+     */
     setMode(m) {
       m = m || DEFAULT_MODE;
       if (m === mode) return;
@@ -321,11 +361,18 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       if (isMotion()) { liveEl.textContent = ""; hasContent = false; animating = false; } // нова сесія показу
       render();
     },
+
+    /** 
+     * Updates motion speed and immediately adjusts ongoing animation tempo. 
+     * @param {number} s 
+     */
     setSpeed(s) {
       speed = s || DEFAULT_SPEED;
       // На льоту змінюємо темп лише активного руху; застигле чекає наступного повідомлення.
       if (isMotion() && animating) setMotionAnim(true);
     },
+
+    /** Re-applies layout for the current mode (called on resize, orientation change, or size change). */
     refresh() {
       if (isMotion()) {
         applyMotionFont();

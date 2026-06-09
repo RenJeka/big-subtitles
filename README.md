@@ -16,9 +16,9 @@
 1. Відкрийте `index.html` (через HTTPS або `http://localhost`) на **обох** пристроях.
 2. На iPad натисніть **«📺 Я — Дисплей»**. З'явиться QR-код і кімната збережеться в пристрої.
 3. На телефоні наведіть **камеру** на QR — браузер відкриє режим **«⌨️ Я — пишу»** у тій самій кімнаті.
-4. Пишіть у полі — текст з'являється на дисплеї за < 1 с.
-   - **Enter** — зсуває поточний рядок в історію на дисплеї, поле очищається.
-   - **«Очистити»** — стирає поточний рядок.
+4. Пишіть у полі та натисніть **Enter** (або кнопку «Надіслати») — рядок миттєво з'являється
+   великим текстом на дисплеї і зберігається в його історії, поле очищається.
+   - **«Очистити»** — стирає поточний рядок без надсилання.
 5. На дисплеї у правому верхньому кутку — прихована **⚙ шестірня**: розмір тексту, режим
    показу (авто-розмір / прокрутка / суфлер / бігуча строка) зі швидкістю, перемикач теми
    та повторний показ QR. Поряд — **📜 історія** (останні рядки; тап копіює рядок назад у live).
@@ -70,19 +70,23 @@ css/
   sender.css            # режим Sender: поле вводу, кнопки дій
   qr-modal.css          # спільний модал парування з QR
 js/
-  config.js             # усі константи: брокер, presence, ключі localStorage, шифрування,
-                        # режими/швидкості, ліміти, debounce, ролі, типи повідомлень,
-                        # параметри fit-text/QR, UI-тексти, defaults
-  store.js              # безпечна обгортка над localStorage (get/set)
-  utils.js              # хелпери DOM/URL, генерація токена, статус
-  crypto.js             # E2E-шифрування payload (AES-GCM): makeKeyB64/initKey/encrypt/decrypt
-  fit-text.js           # автомасштаб тексту (бінарний пошук розміру)
-  live-view.js          # контролер показу live-тексту за режимом (fit/scroll/суфлер/бігучка)
-  mqtt-client.js        # транспорт MQTT по WebSocket + протокол + presence (connect/encode/decode)
-  settings.js           # тема, розмір, режим показу, швидкість, шестірня, банер автоблокування
-  display.js            # режим Display: live-текст, історія, QR (init)
-  sender.js             # режим Sender: textarea, debounce, Enter-commit, синхронізація налаштувань (init)
   app.js                # точка входу (type=module): визначає режим за ?role= → boot()
+  config.js             # усі константи: брокер, presence, ключі localStorage, шифрування,
+                        # режими/швидкості, ліміти, ролі, типи повідомлень,
+                        # параметри fit-text/QR, UI-тексти, defaults
+  screens/
+    display.js          # режим Display: live-текст, історія, QR (init)
+    sender.js           # режим Sender: textarea, Enter-commit, синхронізація налаштувань (init)
+  components/
+    settings.js         # тема, розмір, режим показу, швидкість, шестірня, банер автоблокування
+    live-view.js        # контролер показу live-тексту за режимом (fit/scroll/суфлер/бігучка)
+  utils/
+    utils.js            # хелпери DOM (innerSize, prefersReducedMotion), URL, генерація токена, статус
+    store.js            # безпечна обгортка над localStorage (get/set)
+    crypto.js           # E2E-шифрування payload (AES-GCM): makeKeyB64/initKey/encrypt/decrypt
+    fit-text.js         # автомасштаб тексту (бінарний пошук розміру)
+    mqtt-client.js      # транспорт MQTT по WebSocket + протокол + presence (connect/encode/decode)
+  vendor/               # self-host MQTT.js і qrcodejs (версії — js/vendor/README.md)
 spec-velyki-slova-mvp.md # вихідна специфікація MVP
 ```
 
@@ -110,7 +114,6 @@ Payload кожного повідомлення — `base64url(iv).base64url(cip
 
 | Повідомлення | Тема | Коли | retain |
 |---|---|---|---|
-| `{ "type": "live", "text": "…" }` | `velyki/<room>` | при кожній зміні поля (debounce) | так |
 | `{ "type": "commit", "text": "…" }` | `velyki/<room>` | натиснуто Enter — рядок іде в історію | ні |
 | `{ "type": "settings", "size", "displayTheme", "mode", "speed" }` | `velyki/<room>/settings` | Sender керує показом на Display | так |
 
@@ -119,8 +122,8 @@ retained-payload, тож у спільній темі свіжий retained-`liv
 і перезавантажений Display не отримував би актуальних налаштувань. Display підписується на
 обидві теми.
 
-Display тримає історію (останні ~10 рядків) у пам'яті; `retain` на `live`/`settings` дає
-останній стан тому, хто приєднався пізніше.
+Display тримає історію (останні ~10 рядків) у пам'яті; `retain` на `settings` дає
+актуальні налаштування Sender тому, хто приєднався пізніше.
 
 Окремо від теми кімнати кожна роль публікує **presence**-маркер у
 `velyki/<room>/presence/<role>` (retained) і стежить за партнером. Last Will та закриття

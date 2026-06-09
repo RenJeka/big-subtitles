@@ -117,8 +117,8 @@ export const QR_CORRECT_LEVEL = "M";  // рівень корекції поми�
 
 // Скільки рядків історії тримати в пам'яті Display
 export const HISTORY_LIMIT = 10;
-// Затримка перед публікацією live-тексту (ms)
-export const DEBOUNCE_MS = 150;
+// Затримка перед публікацією live-тексту (ms) (live-typing.deprecated.js)
+// export const DEBOUNCE_MS = 150;
 // Затримка після orientationchange перед refit (ms)
 export const ORIENTATION_DELAY_MS = 300;
 // Затримка перед фокусом textarea у sender (ms)
@@ -137,14 +137,6 @@ export const DEFAULT_MODE = MODE_SCROLL; // типовий режим — про
 
 export const TEXT_PLACEHOLDER = "Очікую текст…";
 export const TEXT_QR_UNAVAILABLE = "QR недоступний — відкрийте посилання нижче вручну.";
-
-// Підписи режимів показу та швидкості (для панелей налаштувань)
-export const TEXT_MODE_LABEL = "Режим показу";
-export const TEXT_MODE_FIT = "Авто-розмір";
-export const TEXT_MODE_SCROLL = "Прокрутка";
-export const TEXT_MODE_TELE = "Суфлер";
-export const TEXT_MODE_MARQUEE = "Бігуча строка";
-export const TEXT_SPEED = "Швидкість";
 
 // Тексти індикатора з'єднання
 export const TEXT_STATUS_CONNECTED = "з'єднано";          // обидва пристрої на зв'язку (зелено)
