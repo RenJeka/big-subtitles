@@ -1,25 +1,42 @@
 /* display.css — режим Display (#screen-display): панель історії, великий
    live-текст і його режими показу (fit / scroll / tele / marquee), банер автоблокування. */
 
-#screen-display { flex-direction: column; position: relative; }
+#screen-display {
+  flex-direction: column;
+  position: relative;
+}
 
 /* ---------- Панель історії ---------- */
 .history-panel {
-  position: fixed; top: 52px; right: 8px;
-  background: var(--panel); color: var(--fg);
-  border-radius: 14px; padding: 0; z-index: 60;
-  display: none; width: 320px; max-width: calc(100vw - 16px);
-  max-height: 70vh; overflow: hidden;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  position: fixed;
+  top: 52px;
+  right: 8px;
+  background: var(--panel);
+  color: var(--fg);
+  border-radius: 14px;
+  padding: 0;
+  z-index: 60;
+  display: none;
+  width: 320px;
+  max-width: calc(100vw - 16px);
+  max-height: 70vh;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
   animation: modal-in 0.2s ease;
 }
-.history-panel.open { display: flex; flex-direction: column; }
+
+.history-panel.open {
+  display: flex;
+  flex-direction: column;
+}
 
 .history-panel-header {
   padding: 14px 16px 10px;
-  font-size: 13px; font-weight: 700; color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fg);
   letter-spacing: 0.02em;
-  border-bottom: 1px solid rgba(127,127,127,0.15);
+  border-bottom: 1px solid rgba(127, 127, 127, 0.15);
   flex-shrink: 0;
 }
 
@@ -29,6 +46,7 @@
   -webkit-overflow-scrolling: touch;
   padding: 6px 8px;
 }
+
 .history-list .line {
   font-size: 15px;
   line-height: 1.35;
@@ -42,8 +60,15 @@
   cursor: pointer;
   transition: background 0.15s ease, opacity 0.18s ease, transform 0.18s ease;
 }
-.history-list .line:hover { background: rgba(127,127,127,0.15); }
-.history-list .line:active { background: rgba(127,127,127,0.25); }
+
+.history-list .line:hover {
+  background: rgba(127, 127, 127, 0.15);
+}
+
+.history-list .line:active {
+  background: rgba(127, 127, 127, 0.25);
+}
+
 /* Початковий стан щойно доданого рядка — анімується до видимого. */
 .history-list .line.line-enter {
   opacity: 0;
@@ -54,41 +79,53 @@
   padding: 24px 16px;
   text-align: center;
   font-size: 14px;
-  color: var(--muted);
+  color: var(--fg);
 }
 
 /* ---------- Контейнер великого live-тексту ---------- */
 #live-wrap {
   flex: 1 1 auto;
   position: relative;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 16px 24px calc(16px + env(safe-area-inset-bottom, 0px));
   overflow: hidden;
   min-height: 0;
 }
+
 /* Субтильне світіння за текстом — додає глибини, не торкаючись контрасту. */
 #live-wrap::before {
   content: "";
-  position: absolute; left: 50%; top: 50%;
-  width: 85%; height: 60%;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 85%;
+  height: 60%;
   transform: translate(-50%, -50%);
   background: radial-gradient(ellipse at center, var(--glow) 0%, transparent 70%);
   filter: blur(40px);
   pointer-events: none;
   z-index: 0;
 }
+
 #live {
   position: relative;
   z-index: 1;
   font-weight: 700;
   line-height: 1.1;
+  /* font-family: Arial, Helvetica, sans-serif; */
   text-align: center;
   white-space: pre-wrap;
   word-break: normal;
   overflow-wrap: break-word;
   max-width: 100%;
 }
-#live.placeholder { color: var(--muted); font-weight: 400; }
+
+#live.placeholder {
+  color: var(--fg);
+  font-weight: 700;
+}
 
 /* ---------- Режими показу live-тексту ---------- */
 /* Клас на #live-wrap; базовий = mode-fit/центр. Керується live-view.js. */
@@ -97,19 +134,23 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
+
 #live-wrap.mode-tele {
   overflow: hidden;
   align-items: flex-start;
 }
+
 #live-wrap.mode-marquee {
   overflow: hidden;
   align-items: center;
   justify-content: flex-start;
 }
+
 #live-wrap.mode-marquee #live {
   white-space: nowrap;
   max-width: none;
 }
+
 /* Потік атомарних повідомлень (суфлер/бігучка) — кожна відправка це окремий
    видимий блок .vs-msg, що додається в кінець і рухається разом з усіма
    попередніми (як стрічка чату/новин), лишаючись візуально розрізнюваним. */
@@ -117,70 +158,137 @@
 #live-wrap.mode-marquee #live {
   display: flex;
 }
+
 #live-wrap.mode-tele #live {
   flex-direction: column;
 }
+
 #live-wrap.mode-marquee #live {
   flex-direction: row;
   align-items: center;
 }
-.vs-msg { flex-shrink: 0; }
-#live-wrap.mode-tele .vs-msg + .vs-msg {
+
+.vs-msg {
+  flex-shrink: 0;
+}
+
+#live-wrap.mode-tele .vs-msg+.vs-msg {
   margin-top: 0.4em;
 }
+
 #live-wrap.mode-marquee .vs-msg {
   white-space: nowrap;
 }
-#live-wrap.mode-marquee .vs-msg + .vs-msg {
+
+#live-wrap.mode-marquee .vs-msg+.vs-msg {
   margin-left: 2.5em;
 }
-#live-wrap.mode-marquee .vs-msg + .vs-msg::before {
+
+#live-wrap.mode-marquee .vs-msg+.vs-msg::before {
   content: "•  ";
-  opacity: 0.45;
 }
+
 /* Авто-рух суфлера/бігучки — ЧИСТА CSS-анімація на композиторі GPU (без JS у циклі).
    Параметри (--vs-from/--vs-to/--vs-dur) виставляє live-view.js на кожну зміну
    сумарного вмісту потоку (нове повідомлення/розмір/швидкість) і ПРОДОВЖУЄ рух із
    поточної позиції до нової кінцевої точки; forwards тримає кінцевий кадр, доки
    наступне повідомлення не подовжить потік далі. */
 @keyframes vs-tele {
-  from { transform: translate3d(0, var(--vs-from, 0), 0); }
-  to   { transform: translate3d(0, var(--vs-to, 0), 0); }
+  from {
+    transform: translate3d(0, var(--vs-from, 0), 0);
+  }
+
+  to {
+    transform: translate3d(0, var(--vs-to, 0), 0);
+  }
 }
+
 @keyframes vs-marquee {
-  from { transform: translate3d(var(--vs-from, 0), 0, 0); }
-  to   { transform: translate3d(var(--vs-to, 0), 0, 0); }
+  from {
+    transform: translate3d(var(--vs-from, 0), 0, 0);
+  }
+
+  to {
+    transform: translate3d(var(--vs-to, 0), 0, 0);
+  }
 }
+
 #live-wrap.mode-tele #live,
 #live-wrap.mode-marquee #live {
   will-change: transform;
   backface-visibility: hidden;
 }
+
 #live-wrap.mode-tele #live {
   animation: vs-tele var(--vs-dur, 12s) linear 1 forwards;
 }
+
 #live-wrap.mode-marquee #live {
   animation: vs-marquee var(--vs-dur, 12s) linear 1 forwards;
 }
 
+/* Статус на Display: завжди повний контраст (без сірого). */
+#screen-display .status {
+  color: var(--fg);
+}
+
 /* ---------- Банер автоблокування ---------- */
 #wake-hint {
-  position: fixed; left: 8px; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-  background: var(--panel); color: var(--fg);
-  border-radius: 12px; padding: 12px 14px; font-size: 14px; z-index: 70;
-  display: none; align-items: center; gap: 12px;
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  background: var(--panel);
+  color: var(--fg);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  z-index: 70;
+  display: none;
+  align-items: center;
+  gap: 12px;
 }
-#wake-hint.show { display: flex; }
-#wake-hint button { border: none; background: var(--accent); color: #fff; border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+
+#wake-hint.show {
+  display: flex;
+}
+
+#wake-hint button {
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
 
 /* Поважати системне налаштування зменшеного руху. */
 @media (prefers-reduced-motion: reduce) {
-  .history-list .line { transition: none; }
-  .history-list .line.line-enter { opacity: 1; transform: none; }
-  .history-panel { animation: none; }
+  .history-list .line {
+    transition: none;
+  }
+
+  .history-list .line.line-enter {
+    opacity: 1;
+    transform: none;
+  }
+
+  .history-panel {
+    animation: none;
+  }
+
   /* Без авто-руху текст лишається статичним — дозволяємо скрол, щоб дістатися решти. */
-  #live-wrap.mode-tele { overflow-y: auto; }
-  #live-wrap.mode-marquee { overflow-x: auto; }
+  #live-wrap.mode-tele {
+    overflow-y: auto;
+  }
+
+  #live-wrap.mode-marquee {
+    overflow-x: auto;
+  }
+
   #live-wrap.mode-tele #live,
-  #live-wrap.mode-marquee #live { animation: none !important; transform: none !important; }
+  #live-wrap.mode-marquee #live {
+    animation: none !important;
+    transform: none !important;
+  }
 }
