@@ -68,6 +68,12 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   let scrubbing = false;  // користувач вручну скролить — авто-рух на паузі
   let resumeTimer = null; // таймер відновлення авто-руху після бездіяльності
 
+  // Параметри активної CSS-анімації для аналітичного обчислення поточного зсуву.
+  // animStart — «віртуальний» старт у мс (performance.now() з урахуванням від'ємного
+  // delay); null = анімації немає. Див. currentOffset().
+  let animStart = null;
+  let animFrom = 0, animTo = 0, animDur = 0;
+
   /** @returns {boolean} true when current mode produces continuous stream motion */
   function isMotion() { return mode === MODE_TELE || mode === MODE_MARQUEE; }
 
@@ -116,8 +122,27 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     return (mode === MODE_MARQUEE) ? v[4] : v[5]; // matrix(a,b,c,d,tx,ty)
   }
 
+  /**
+   * Поточний зсув потоку вздовж осі руху. Якщо анімація активна — рахуємо АНАЛІТИЧНО
+   * з часу (linear-рух: from→to за animDur), бо getComputedStyle().transform на
+   * WebKit/Safari під час composited-анімації повертає ненадійне значення (часто
+   * кінцеве `to`), що зривало продовження руху. Якщо анімації немає (застигле/ручний
+   * скрол) — getComputedStyle надійний, читаємо inline transform через readTranslate().
+   * @returns {number|null} зсув px вздовж осі руху, або null якщо стану руху нема
+   */
+  function currentOffset() {
+    if (animStart != null && animDur > 0) {
+      let p = (performance.now() - animStart) / 1000 / animDur;
+      if (p < 0) p = 0;
+      else if (p > 1) p = 1;
+      return animFrom + (animTo - animFrom) * p;
+    }
+    return readTranslate();
+  }
+
   /** Cancels animation and holds #live at the final visible position (no motion). */
   function restStatic() {
+    animStart = null;
     liveEl.style.animation = "none";
     liveEl.style.transform = hasContent ? axisTransform(motionEndpoints().to) : "";
   }
@@ -130,6 +155,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
    */
   function setMotionAnim(continueFromCurrent) {
     if (!hasContent) {                  // нема тексту — нема руху
+      animStart = null;
       liveEl.style.animation = "none";
       liveEl.style.transform = "";
       return;
@@ -142,7 +168,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     // на старт при додаванні повідомлення / зміні швидкості/розміру.
     let delay = 0;
     if (continueFromCurrent && ep.distance > 0) {
-      const cur = readTranslate();
+      const cur = currentOffset();
       if (cur != null) {
         let p = (ep.from - cur) / ep.distance;
         // Затиснути в [0,1], а НЕ скидати на старт. Раніше p>=1 (потік застиг біля
@@ -167,6 +193,13 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     liveEl.style.animation = "none";
     void liveEl.offsetWidth;
     liveEl.style.animation = name + " " + dur + "s linear " + delay + "s 1 forwards";
+
+    // Зберігаємо параметри для аналітичного currentOffset(). Від'ємний delay = рух
+    // уже частково пройдено, тож «віртуальний» старт зсуваємо в минуле на |delay|.
+    animFrom = ep.from;
+    animTo = ep.to;
+    animDur = dur;
+    animStart = performance.now() + delay * 1000;
   }
 
   /**
@@ -216,7 +249,8 @@ export function createLiveView(liveEl, wrapEl, getSize) {
    * the visible position does not jump when the user starts swiping back.
    */
   function enterScrub() {
-    const tx = readTranslate();
+    const tx = currentOffset();
+    animStart = null;
     animating = false;
     scrubbing = true;
     liveEl.style.animation = "none";
@@ -292,6 +326,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
    * Resets all inline styles and CSS custom properties written by any display mode.
    */
   function resetStyles() {
+    animStart = null;
     liveEl.style.fontSize = "";
     liveEl.style.transform = "";
     liveEl.style.animation = "";
@@ -370,6 +405,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       // не зриваючи паузу — автопрокрутка наздожене його після відновлення.
       if (scrubbing) return;
       if (prefersReducedMotion()) {
+        animStart = null;
         animating = false;
         liveEl.style.animation = "none";
         liveEl.style.transform = "";
