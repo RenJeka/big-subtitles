@@ -136,12 +136,17 @@ export function createLiveView(liveEl, wrapEl, getSize) {
    */
   function motionEndpoints() {
     let from, to;
+    // Кінцева точка прив'язана до НАЙНОВІШОГО повідомлення (останній .vs-msg), а не
+    // до краю всього потоку. Стрічка тече безперервно: старі повідомлення виповзають
+    // за верхню (ліву) межу, а найновіше доходить до верху (лівого краю) і там
+    // тримається (не зникає). Так рух не застигає «на півдорозі» між повідомленнями.
+    const last = liveEl.lastElementChild;
     if (mode === MODE_MARQUEE) {
       from = wrapEl.clientWidth;
-      to = Math.min(0, wrapEl.clientWidth - liveEl.scrollWidth);
+      to = Math.min(0, last ? -last.offsetLeft : 0);
     } else {
       from = wrapEl.clientHeight;
-      to = Math.min(0, wrapEl.clientHeight - liveEl.scrollHeight);
+      to = Math.min(0, last ? -last.offsetTop : 0);
     }
     return { from: from, to: to, distance: from - to };
   }
