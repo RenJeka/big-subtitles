@@ -15,202 +15,177 @@ import { connect, encode } from "./mqtt-client.js";
 import { initKey, encrypt } from "./crypto.js";
 import * as store from "./store.js";
 
-/**
- * Initialize and bind the Sender UI, local state, and MQTT connection used to send live and committed messages and to push display settings.
- *
- * Sets up sender theme and display settings UI, validates and saves room/key (initializing encryption), opens the QR modal, connects to MQTT and ensures retained settings publishing, wires controls for size/mode/speed/theme, manages live debounced updates and commit/history flows, binds outside-panel closing and viewport adjustments for on-screen keyboards, and focuses the input field.
- */
+const MODE_BTN_IDS = {
+  [MODE_FIT]:     "sender-mode-fit",
+  [MODE_SCROLL]:  "sender-mode-scroll",
+  [MODE_TELE]:    "sender-mode-tele",
+  [MODE_MARQUEE]: "sender-mode-marquee",
+};
+
+function updateThemeBtns(darkId, lightId, theme) {
+  const dk = $(darkId), lt = $(lightId);
+  if (!dk || !lt) return;
+  if (theme === "light") { lt.className = ""; dk.className = "secondary outline"; }
+  else                   { dk.className = ""; lt.className = "secondary outline"; }
+}
+
+function bindViewport() {
+  const vv = window.visualViewport;
+  if (!vv) return; // старі браузери — fallback на CSS height:100%
+  const screen = $("screen-sender");
+  const apply = () => {
+    screen.style.height    = vv.height + "px";
+    screen.style.transform = "translateY(" + vv.offsetTop + "px)";
+  };
+  vv.addEventListener("resize", apply);
+  vv.addEventListener("scroll", apply);
+  apply();
+}
+
 export function init() {
   show("screen-sender");
 
-  // ===================== Тема Sender (локальна) =====================
-  let senderTheme = store.get(LS_SENDER_THEME, DEFAULT_THEME);
-
-  function updateSenderThemeBtns(theme) {
-    const dk = $("sender-theme-dark"), lt = $("sender-theme-light");
-    if (!dk || !lt) return;
-    if (theme === "light") { lt.className = ""; dk.className = "secondary outline"; }
-    else { dk.className = ""; lt.className = "secondary outline"; }
-  }
-
-  function applySenderTheme(theme) {
-    senderTheme = theme;
-    store.set(LS_SENDER_THEME, theme);
-    document.documentElement.setAttribute("data-theme", theme);
-    updateSenderThemeBtns(theme);
-  }
-
-  // ===================== Налаштування Display (передаються через MQTT) =====================
+  // ===================== Стан =====================
+  let senderTheme  = store.get(LS_SENDER_THEME, DEFAULT_THEME);
   let displayTheme = store.get(LS_PUSH_THEME, DEFAULT_THEME);
   let displaySize  = parseFloat(store.get(LS_SIZE, DEFAULT_SIZE)) || 1;
   let displayMode  = store.get(LS_MODE, DEFAULT_MODE);
   let displaySpeed = parseInt(store.get(LS_SPEED, String(DEFAULT_SPEED)), 10) || DEFAULT_SPEED;
 
-  function updateDisplayThemeBtns(theme) {
-    const dk = $("sender-display-theme-dark"), lt = $("sender-display-theme-light");
-    if (!dk || !lt) return;
-    if (theme === "light") { lt.className = ""; dk.className = "secondary outline"; }
-    else { dk.className = ""; lt.className = "secondary outline"; }
+  // ===================== Синхронізація стану → UI =====================
+  function applySenderTheme(theme) {
+    senderTheme = theme;
+    store.set(LS_SENDER_THEME, theme);
+    document.documentElement.setAttribute("data-theme", theme);
+    updateThemeBtns("sender-theme-dark", "sender-theme-light", theme);
   }
 
-  const SENDER_MODE_BTN_IDS = {
-    [MODE_FIT]: "sender-mode-fit",
-    [MODE_SCROLL]: "sender-mode-scroll",
-    [MODE_TELE]: "sender-mode-tele",
-    [MODE_MARQUEE]: "sender-mode-marquee"
-  };
+  function applyDisplayTheme(theme) {
+    displayTheme = theme;
+    store.set(LS_PUSH_THEME, theme);
+    updateThemeBtns("sender-display-theme-dark", "sender-display-theme-light", theme);
+  }
 
-  function updateDisplaySizeValue() {
+  function applyDisplaySize(size) {
+    displaySize = size;
+    store.set(LS_SIZE, String(size));
     const el = $("sender-size-value");
-    if (el) el.textContent = Math.round(displaySize * 100) + "%";
+    if (el) el.textContent = Math.round(size * 100) + "%";
   }
 
-  function updateDisplaySpeedValue() {
-    const el = $("sender-speed-value");
-    if (el) el.textContent = displaySpeed + "/" + SPEED_MAX;
-  }
-
-  function updateDisplayModeBtns(mode) {
-    highlightModeButtons(SENDER_MODE_BTN_IDS, mode);
+  function applyDisplayMode(mode) {
+    displayMode = mode;
+    store.set(LS_MODE, mode);
+    highlightModeButtons(MODE_BTN_IDS, mode);
     const speedRow = $("sender-speed-row");
-    if (speedRow) {
-      speedRow.classList.toggle("hidden", !(mode === MODE_TELE || mode === MODE_MARQUEE));
-    }
+    if (speedRow) speedRow.classList.toggle("hidden", mode !== MODE_TELE && mode !== MODE_MARQUEE);
   }
 
-  // Застосувати поточний стан UI-контролів
-  applySenderTheme(senderTheme);
-  updateDisplayThemeBtns(displayTheme);
-  updateDisplayModeBtns(displayMode);
-  updateDisplaySizeValue();
-  updateDisplaySpeedValue();
+  function applyDisplaySpeed(speed) {
+    displaySpeed = speed;
+    store.set(LS_SPEED, String(speed));
+    const el = $("sender-speed-value");
+    if (el) el.textContent = speed + "/" + SPEED_MAX;
+  }
 
-  // ===================== Кімната =====================
+  // Початковий стан UI (тема показується навіть у стані помилки — до перевірки кімнати)
+  applySenderTheme(senderTheme);
+  applyDisplayTheme(displayTheme);
+  applyDisplayMode(displayMode);
+  applyDisplaySize(displaySize);
+  applyDisplaySpeed(displaySpeed);
+
+  // ===================== Кімната та ключ =====================
   const room = resolveRoom();
   if (!room) {
-    $("input").value = "";
+    $("input").value       = "";
     $("input").placeholder = "Немає кімнати. Відскануйте QR з дисплея.";
-    $("input").disabled = true;
+    $("input").disabled    = true;
     setStatus($("status-sender"), "err", "немає кімнати");
     return;
   }
   saveRoom(room);
 
-  // E2E-ключ обов'язковий: без нього Display не зможе дешифрувати наш текст.
   const key = resolveKey();
   if (!key) {
-    $("input").value = "";
+    $("input").value       = "";
     $("input").placeholder = "Немає ключа. Відскануйте QR з дисплея.";
-    $("input").disabled = true;
+    $("input").disabled    = true;
     setStatus($("status-sender"), "err", "немає ключа");
     return;
   }
   saveKey(key);
   initKey(key, "encrypt");
-
-  // QR-модал (той самий, що і на Display)
   initQrModal(room, key);
 
   // ===================== MQTT =====================
   const conn = connect(room, ROLE_SENDER, null, $("status-sender"));
 
   function publishSettings() {
-    if (!conn || !conn.client) return;
+    if (!conn?.client) return;
     const json = JSON.stringify({
       type: MSG_TYPE_SETTINGS,
       size: displaySize,
       displayTheme,
       mode: displayMode,
-      speed: displaySpeed
+      speed: displaySpeed,
     });
     // Окрема тема velyki/<room>/settings — щоб retained-налаштування не затирались
     // retained-`live` (на одну тему припадає лише один retained-payload).
-    encrypt(json).then((payload) => conn.client.publish(conn.settingsTopic, payload, { retain: true, qos: 0 }));
+    encrypt(json).then((payload) =>
+      conn.client.publish(conn.settingsTopic, payload, { retain: true, qos: 0 }));
   }
 
   function publish(type, text, retain) {
-    if (!conn || !conn.client) return;
+    if (!conn?.client) return;
     encrypt(encode(type, text)).then((payload) =>
       conn.client.publish(conn.topic, payload, { retain: !!retain, qos: 0 }));
   }
 
-  // При кожному (пере)підключенні — одразу надіслати актуальні налаштування.
-  // Це гарантує пріоритет Sender навіть якщо Display змінив щось локально.
-  if (conn && conn.client) {
-    conn.client.on("connect", publishSettings);
-  }
+  // При кожному (пере)підключенні — надіслати актуальні налаштування.
+  if (conn?.client) conn.client.on("connect", publishSettings);
 
-  // ===================== UI налаштувань Sender =====================
+  // ===================== Обробники налаштувань =====================
   $("sender-gear").addEventListener("click", () => {
     $("sender-history-panel").classList.remove("open");
     $("sender-settings").classList.toggle("open");
   });
-
   $("sender-history-btn").addEventListener("click", () => {
     $("sender-settings").classList.remove("open");
     $("sender-history-panel").classList.toggle("open");
   });
-
-  // Закривати панелі кліком поза ними (кнопки-перемикачі ігноруємо).
-  bindOutsideClose($("sender-settings"), $("sender-gear"), $("sender-history-btn"));
+  bindOutsideClose($("sender-settings"),      $("sender-gear"),        $("sender-history-btn"));
   bindOutsideClose($("sender-history-panel"), $("sender-history-btn"), $("sender-gear"));
 
-  // Розмір тексту на Display
-  function updateSenderSize(delta) {
-    displaySize = Math.round((displaySize + delta) * 100) / 100;
-    if (displaySize > SIZE_MAX) displaySize = SIZE_MAX;
-    if (displaySize < SIZE_MIN) displaySize = SIZE_MIN;
-    store.set(LS_SIZE, String(displaySize));
-    updateDisplaySizeValue();
-    publishSettings();
-  }
-
-  $("sender-size-minus").addEventListener("click", () => updateSenderSize(-SIZE_STEP));
-  $("sender-size-plus").addEventListener("click", () => updateSenderSize(SIZE_STEP));
-
-  // Режим показу на Display
-  function setDisplayMode(mode) {
-    displayMode = mode;
-    store.set(LS_MODE, mode);
-    updateDisplayModeBtns(mode);
-    publishSettings();
-  }
-  Object.keys(SENDER_MODE_BTN_IDS).forEach((m) => {
-    const btn = $(SENDER_MODE_BTN_IDS[m]);
-    if (btn) btn.addEventListener("click", () => setDisplayMode(m));
-  });
-
-  // Швидкість авто-руху на Display
-  function updateDisplaySpeed(delta) {
-    displaySpeed += delta;
-    if (displaySpeed > SPEED_MAX) displaySpeed = SPEED_MAX;
-    if (displaySpeed < SPEED_MIN) displaySpeed = SPEED_MIN;
-    store.set(LS_SPEED, String(displaySpeed));
-    updateDisplaySpeedValue();
-    publishSettings();
-  }
-  $("sender-speed-minus").addEventListener("click", () => updateDisplaySpeed(-1));
-  $("sender-speed-plus").addEventListener("click", () => updateDisplaySpeed(1));
-
-  // Власна тема Sender
-  $("sender-theme-dark").addEventListener("click",  () => applySenderTheme("dark"));
+  $("sender-theme-dark").addEventListener( "click", () => applySenderTheme("dark"));
   $("sender-theme-light").addEventListener("click", () => applySenderTheme("light"));
 
-  // Тема Display (команда на перевизначення)
-  $("sender-display-theme-dark").addEventListener("click", () => {
-    displayTheme = "dark";
-    store.set(LS_PUSH_THEME, displayTheme);
-    updateDisplayThemeBtns(displayTheme);
+  $("sender-display-theme-dark").addEventListener( "click", () => { applyDisplayTheme("dark");  publishSettings(); });
+  $("sender-display-theme-light").addEventListener("click", () => { applyDisplayTheme("light"); publishSettings(); });
+
+  $("sender-size-minus").addEventListener("click", () => {
+    applyDisplaySize(Math.max(SIZE_MIN, Math.round((displaySize - SIZE_STEP) * 100) / 100));
     publishSettings();
   });
-  $("sender-display-theme-light").addEventListener("click", () => {
-    displayTheme = "light";
-    store.set(LS_PUSH_THEME, displayTheme);
-    updateDisplayThemeBtns(displayTheme);
+  $("sender-size-plus").addEventListener("click", () => {
+    applyDisplaySize(Math.min(SIZE_MAX, Math.round((displaySize + SIZE_STEP) * 100) / 100));
     publishSettings();
   });
 
-  // Показати QR з налаштувань
+  Object.keys(MODE_BTN_IDS).forEach((m) => {
+    const btn = $(MODE_BTN_IDS[m]);
+    if (btn) btn.addEventListener("click", () => { applyDisplayMode(m); publishSettings(); });
+  });
+
+  $("sender-speed-minus").addEventListener("click", () => {
+    applyDisplaySpeed(Math.max(SPEED_MIN, displaySpeed - 1));
+    publishSettings();
+  });
+  $("sender-speed-plus").addEventListener("click", () => {
+    applyDisplaySpeed(Math.min(SPEED_MAX, displaySpeed + 1));
+    publishSettings();
+  });
+
   $("sender-show-qr").addEventListener("click", () => {
     openQrModal();
     $("sender-settings").classList.remove("open");
@@ -219,7 +194,6 @@ export function init() {
   // ===================== Введення тексту =====================
   const input = $("input");
 
-  // Історія відправлених: клік по рядку повертає його в поле для повторної відправки.
   const history = createHistory($("sender-history"), $("sender-history-empty"), (text) => {
     input.value = text;
     $("sender-history-panel").classList.remove("open");
@@ -236,38 +210,13 @@ export function init() {
     input.focus();
   }
 
-  // Enter (без Shift) — зафіксувати рядок в історію дисплея
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      commitLine();
-    }
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitLine(); }
   });
+  $("send-btn").addEventListener(  "click", commitLine);
+  $("clear-btn").addEventListener( "click", () => { input.value = ""; input.focus(); });
 
-  $("send-btn").addEventListener("click", commitLine);
-
-  $("clear-btn").addEventListener("click", () => {
-    input.value = "";
-    input.focus();
-  });
-
-  // ===================== Висота під клавіатуру =====================
-  // Екранна клавіатура на телефоні не зменшує layout viewport → кнопки ховаються під нею.
-  // Прив'язуємо висоту екрана Sender до visualViewport, щоб кнопки лишались видимими.
-  function bindViewport() {
-    const vv = window.visualViewport;
-    if (!vv) return; // старі браузери — fallback на CSS height:100%
-    const screen = $("screen-sender");
-    const apply = () => {
-      screen.style.height = vv.height + "px";
-      screen.style.transform = "translateY(" + vv.offsetTop + "px)";
-    };
-    vv.addEventListener("resize", apply);
-    vv.addEventListener("scroll", apply);
-    apply();
-  }
+  // ===================== Viewport та фокус =====================
   bindViewport();
-
-  // Фокус на полі для виклику клавіатури
   setTimeout(() => input.focus(), FOCUS_DELAY_MS);
 }
