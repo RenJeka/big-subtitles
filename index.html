@@ -98,6 +98,14 @@
           <span>Показати QR</span>
         </button>
       </div>
+      <!-- ТИМЧАСОВО: діагностика бага анімації суфлера на Safari 15. Прибрати після фіксу. -->
+      <label>Діагностика</label>
+      <div class="settings-grid">
+        <button id="copy-log" class="secondary"><span class="btn-emoji">📋</span><span>Копіювати лог</span></button>
+        <button id="clear-log" class="secondary outline"><span class="btn-emoji">🗑️</span><span>Очистити лог</span></button>
+      </div>
+      <textarea id="debug-log-out" class="hidden" readonly rows="8"
+        style="width:100%;font-family:monospace;font-size:11px;white-space:pre;"></textarea>
     </div>
 
     <div id="history-panel" class="history-panel">

@@ -32,6 +32,7 @@ import {
 } from "../config.js";
 import { fit } from "../utils/fit-text.js";
 import { innerSize, prefersReducedMotion } from "../utils/utils.js";
+import { logEvent } from "../utils/debug-log.js"; // ТИМЧАСОВО: діагностика бага суфлера на Safari 15
 
 const ALL_MODE_CLASSES = ["mode-fit", "mode-scroll", "mode-tele", "mode-marquee"];
 
@@ -67,6 +68,25 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   let animating = false;  // чи триває рух потоку до поточної кінцевої точки
   let scrubbing = false;  // користувач вручну скролить — авто-рух на паузі
   let resumeTimer = null; // таймер відновлення авто-руху після бездіяльності
+
+  // ТИМЧАСОВО (діагностика): паралельне аналітичне відстеження поточного зсуву,
+  // незалежне від getComputedStyle. effStart — «віртуальний» момент старту з
+  // урахуванням від'ємного delay (може бути в минулому); рух лінійний.
+  let dbgMsgN = 0, animSeq = 0;
+  let effStart = 0, animFrom = 0, animTo = 0, animDurMs = 0;
+  function nowMs() { return (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now(); }
+  function analyticOffset() {
+    if (!animDurMs) return null;
+    let p = (nowMs() - effStart) / animDurMs;
+    if (p < 0) p = 0; else if (p > 1) p = 1;
+    return animFrom + (animTo - animFrom) * p;
+  }
+  function rawTransform() {
+    try {
+      const t = getComputedStyle(liveEl).transform;
+      return (!t || t === "none") ? "none" : t.replace(/\s+/g, "");
+    } catch (e) { return "ERR:" + e; }
+  }
 
   /** @returns {boolean} true when current mode produces continuous stream motion */
   function isMotion() { return mode === MODE_TELE || mode === MODE_MARQUEE; }
@@ -120,6 +140,8 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   function restStatic() {
     liveEl.style.animation = "none";
     liveEl.style.transform = hasContent ? axisTransform(motionEndpoints().to) : "";
+    animDurMs = 0; // ТИМЧАСОВО: зупиняємо аналітичний відлік
+    logEvent("restStatic", { hasContent: hasContent, to: hasContent ? motionEndpoints().to : "" });
   }
 
   /**
@@ -132,17 +154,24 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     if (!hasContent) {                  // нема тексту — нема руху
       liveEl.style.animation = "none";
       liveEl.style.transform = "";
+      logEvent("setAnim-skip", { reason: "noContent" });
       return;
     }
     const ep = motionEndpoints();
     const dur = Math.max(1, ep.distance / pxPerSec(mode, speed)); // сек, сталий px/с
 
+    // ТИМЧАСОВО (діагностика): зчитуємо позицію ДВОМА способами для порівняння.
+    const curComputed = readTranslate();         // через getComputedStyle (підозрюваний)
+    const curAnalytic = analyticOffset();         // через час старту (еталон)
+    const rawT = rawTransform();
+    const prevAnim = liveEl.style.animation || "";
+
     // Продовження: обчислюємо пройдену частку p від поточного зсуву й вносимо її як
     // від'ємний animation-delay у ті самі keyframes (full from→to). Так рух не «стрибає»
     // на старт при додаванні повідомлення / зміні швидкості/розміру.
-    let delay = 0;
+    let delay = 0, pUsed = null;
     if (continueFromCurrent && ep.distance > 0) {
-      const cur = readTranslate();
+      const cur = curComputed;
       if (cur != null) {
         let p = (ep.from - cur) / ep.distance;
         // Затиснути в [0,1], а НЕ скидати на старт. Раніше p>=1 (потік застиг біля
@@ -152,6 +181,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
         // (рух продовжується з поточної позиції, без стрибка вниз).
         if (p < 0) p = 0;
         else if (p > 1) p = 1;
+        pUsed = p;
         delay = -p * dur;
       }
     }
@@ -167,6 +197,25 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     liveEl.style.animation = "none";
     void liveEl.offsetWidth;
     liveEl.style.animation = name + " " + dur + "s linear " + delay + "s 1 forwards";
+
+    // ТИМЧАСОВО (діагностика): оновлюємо аналітичний стан і логуємо все.
+    animSeq++;
+    animDurMs = dur * 1000;
+    animFrom = ep.from;
+    animTo = ep.to;
+    effStart = nowMs() + delay * 1000; // delay<0 → старт у минулому
+    logEvent("setAnim", {
+      seq: animSeq, contFrom: continueFromCurrent,
+      from: ep.from, to: ep.to, dist: ep.distance, dur: dur, delay: delay,
+      pUsed: pUsed == null ? "null" : pUsed,
+      cur_computed: curComputed == null ? "null" : curComputed,
+      cur_analytic: curAnalytic == null ? "null" : curAnalytic,
+      diff: (curComputed != null && curAnalytic != null) ? (curComputed - curAnalytic) : "n/a",
+      rawT: rawT, prevAnim: '"' + prevAnim + '"',
+      sH: liveEl.scrollHeight, cH: wrapEl.clientHeight,
+      sW: liveEl.scrollWidth, cW: wrapEl.clientWidth,
+      kids: liveEl.children.length, speed: speed
+    });
   }
 
   /**
@@ -174,12 +223,21 @@ export function createLiveView(liveEl, wrapEl, getSize) {
    * If a new message arrived mid-flight the old animation fires animationcancel instead,
    * so this handler is already superseded in that case.
    */
-  function onMotionEnd() {
+  function onMotionEnd(e) {
+    logEvent("animationend", { anim: e && e.animationName, animating: animating, raw: rawTransform() });
     if (!isMotion() || !animating) return;
     animating = false;
     restStatic();
   }
   liveEl.addEventListener("animationend", onMotionEnd);
+  // ТИМЧАСОВО (діагностика): фіксуємо весь життєвий цикл CSS-анімації, зокрема
+  // animationcancel — щоб побачити, чи скасування старої анімації не «вбиває» нову.
+  liveEl.addEventListener("animationstart", function (e) {
+    logEvent("animationstart", { anim: e.animationName, raw: rawTransform() });
+  });
+  liveEl.addEventListener("animationcancel", function (e) {
+    logEvent("animationcancel", { anim: e.animationName, animating: animating, raw: rawTransform() });
+  });
 
   // ---- Ручний скрол назад + автопауза/автовідновлення ----
 
@@ -217,6 +275,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
    */
   function enterScrub() {
     const tx = readTranslate();
+    logEvent("enterScrub", { tx: tx == null ? "null" : tx, analytic: analyticOffset() });
     animating = false;
     scrubbing = true;
     liveEl.style.animation = "none";
@@ -253,6 +312,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     if (tx > 0) tx = 0;
     if (tx < ep.to) tx = ep.to;
     liveEl.style.transform = axisTransform(tx); // continueFromCurrent прочитає його
+    logEvent("resume", { scroll: s, tx: tx, epTo: ep.to });
     animating = true;
     setMotionAnim(true);
   }
@@ -366,6 +426,12 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       appendMessage(text);
       hasContent = true;
       applyMotionFont();
+      dbgMsgN++;
+      logEvent("showLine", {
+        msgN: dbgMsgN, len: text.length, wasEmpty: wasEmpty,
+        scrubbing: scrubbing, prm: prefersReducedMotion(), animating: animating,
+        kids: liveEl.children.length, mode: mode
+      });
       // Користувач читає старе (ручний скрол): тихо лишаємо нове в кінці потоку,
       // не зриваючи паузу — автопрокрутка наздожене його після відновлення.
       if (scrubbing) return;
