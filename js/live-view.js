@@ -45,6 +45,16 @@ function scrollFontPx(wrapEl, size) {
   return Math.max(FIT_MIN_FONT_PX, Math.round(size * SCROLL_FONT_RATIO * base));
 }
 
+// Корисна площа елемента (clientW/H мінус padding) — щоб fit() не виходив за межі
+// видимої зони (padding #live-wrap резервує місце під toolbar і safe-area).
+function innerSize(el) {
+  const s = getComputedStyle(el);
+  return {
+    w: el.clientWidth  - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight),
+    h: el.clientHeight - parseFloat(s.paddingTop)  - parseFloat(s.paddingBottom)
+  };
+}
+
 function prefersReducedMotion() {
   return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
@@ -269,7 +279,8 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     wrapEl.classList.add("mode-" + mode);
 
     if (mode === MODE_FIT) {
-      fit(liveEl, wrapEl, getSize());
+      const { w, h } = innerSize(wrapEl);
+      fit(liveEl, w, h, getSize());
     } else if (mode === MODE_SCROLL) {
       applyMotionFont();
     } else {
