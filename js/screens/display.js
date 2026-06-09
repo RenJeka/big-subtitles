@@ -54,6 +54,7 @@ export function init() {
     liveView.setSpeed(settings.getSpeed());
     // У fit/scroll відновити останній live-текст; tele/marquee стартує з порожнього потоку.
     if (!isMotionMode()) setLive(lastText);
+    else liveEl.classList.remove("placeholder");
   }
 
   // Клік по рядку в історії: fit/scroll показує його як live,

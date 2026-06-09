@@ -123,6 +123,12 @@
   max-width: 100%;
 }
 
+#live.placeholder {
+  font-size: 42px;
+  font-weight: 400;
+  color: var(--muted, #888);
+}
+
 #live-wrap.mode-fit #live {
   overflow-wrap: normal;
 }
@@ -138,6 +144,11 @@
 #live-wrap.mode-tele {
   overflow: hidden;
   align-items: flex-start;
+  padding-bottom: 0;
+}
+
+#live-wrap.mode-tele .vs-msg:last-child {
+  padding-bottom: 100px;
 }
 
 #live-wrap.mode-marquee {
