@@ -89,7 +89,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px 24px calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: calc(env(safe-area-inset-top, 8px) + 52px) 24px calc(env(safe-area-inset-bottom, 0px) + 32px);
   overflow: hidden;
   min-height: 0;
 }
