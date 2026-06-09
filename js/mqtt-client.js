@@ -19,7 +19,7 @@ export function decode(raw) {
   try {
     const o = JSON.parse(raw);
     if (o && typeof o.type === "string") return o;
-  } catch (e) {}
+  } catch (e) { }
   // Сумісність: голий текст трактуємо як live
   return { type: MSG_TYPE_LIVE, text: raw };
 }
@@ -37,10 +37,12 @@ export function decode(raw) {
  * @returns {{ client: import("mqtt").MqttClient, topic: string, settingsTopic: string } | null} An object containing the MQTT client and the room's main and settings topics, or `null` if the MQTT library is not available.
  */
 export function connect(room, role, onMessage, statusEl, onPeerConnectionChange) {
+
   if (typeof mqtt === "undefined") {
     setStatus(statusEl, "err", TEXT_STATUS_NO_MQTT);
     return null;
   }
+
   const topic = TOPIC_PREFIX + room;
   const settingsTopic = topic + SETTINGS_INFIX; // окремий retained-слот під налаштування
   const peerRole = role === ROLE_DISPLAY ? ROLE_SENDER : ROLE_DISPLAY;
@@ -61,6 +63,7 @@ export function connect(room, role, onMessage, statusEl, onPeerConnectionChange)
   // Статус залежить від двох умов: з'єднання з брокером і присутності партнера.
   let brokerConnected = false;
   let peerOnline = false;
+
   function refreshStatus() {
     if (brokerConnected) {
       if (peerOnline) {

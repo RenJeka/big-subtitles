@@ -33,19 +33,29 @@ import { fit } from "./fit-text.js";
 
 const ALL_MODE_CLASSES = ["mode-fit", "mode-scroll", "mode-tele", "mode-marquee"];
 
-/** @param {'tele'|'marquee'} mode @param {number} speed @returns {number} px/s for the given mode and speed level */
+/**
+ * @param {'tele'|'marquee'} mode 
+ * @param {number} speed @returns {number} px/s for the given mode and speed level
+ */
 function pxPerSec(mode, speed) {
   if (mode === MODE_MARQUEE) return MARQUEE_PX_BASE + (speed - 1) * MARQUEE_PX_STEP;
   return TELE_PX_BASE + (speed - 1) * TELE_PX_STEP;
 }
 
-/** @param {HTMLElement} wrapEl @param {number} size scale factor @returns {number} font-size px for scroll/tele/marquee */
+/**
+ * @param {HTMLElement} wrapEl 
+ * @param {number} size scale factor 
+ * @returns {number} font-size px for scroll/tele/marquee
+ */
 function scrollFontPx(wrapEl, size) {
   const base = Math.min(wrapEl.clientWidth, wrapEl.clientHeight);
   return Math.max(FIT_MIN_FONT_PX, Math.round(size * SCROLL_FONT_RATIO * base));
 }
 
-/** @param {HTMLElement} el @returns {{w:number, h:number}} inner content area (clientW/H minus CSS padding) */
+/**
+ * @param {HTMLElement} el 
+ * @returns {{w:number, h:number}} inner content area (clientW/H minus CSS padding)
+ */
 function innerSize(el) {
   const s = getComputedStyle(el);
   return {
@@ -54,7 +64,9 @@ function innerSize(el) {
   };
 }
 
-/** @returns {boolean} whether the user has requested reduced motion via system settings */
+/**
+ * @returns {boolean} whether the user has requested reduced motion via system settings
+ */
 function prefersReducedMotion() {
   return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
