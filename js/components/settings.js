@@ -1,16 +1,17 @@
 // Панель налаштувань Display: тема, розмір, режим показу, швидкість, банер автоблокування.
 import {
-  LS_THEME, LS_SIZE, LS_WAKE, LS_MODE, LS_SPEED,
-  DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED,
-  SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP,
+  LS_THEME, LS_SIZE, LS_WAKE, LS_MODE, LS_SPEED, LS_LINEHEIGHT,
+  DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED, DEFAULT_LINEHEIGHT,
+  SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP, LINEHEIGHT_MIN, LINEHEIGHT_MAX,
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE
 } from "../config.js";
 import * as store from "../utils/store.js";
 import { $, highlightModeButtons } from "../utils/utils.js";
 
-let currentSize  = 1;
-let currentMode  = DEFAULT_MODE;
-let currentSpeed = DEFAULT_SPEED;
+let currentSize       = 1;
+let currentMode       = DEFAULT_MODE;
+let currentSpeed      = DEFAULT_SPEED;
+let currentLineHeight = DEFAULT_LINEHEIGHT;
 
 const MODE_BTN_IDS = {
   [MODE_FIT]:     "mode-fit",
@@ -28,6 +29,11 @@ function updateSizeValue() {
 function updateSpeedValue() {
   const el = $("speed-value");
   if (el) el.textContent = currentSpeed + "/" + SPEED_MAX;
+}
+
+function updateLineHeightValue() {
+  const el = $("lh-value");
+  if (el) el.textContent = currentLineHeight + "/" + LINEHEIGHT_MAX;
 }
 
 // Підсвічує активний режим і показує/ховає рядок швидкості.
@@ -49,12 +55,13 @@ export function applyTheme(theme) {
   }
 }
 
-export function getSize()  { return currentSize;  }
-export function getMode()  { return currentMode;  }
-export function getSpeed() { return currentSpeed; }
+export function getSize()       { return currentSize;       }
+export function getMode()       { return currentMode;       }
+export function getSpeed()      { return currentSpeed;      }
+export function getLineHeight() { return currentLineHeight; }
 
 // Застосувати налаштування, надіслані Sender по MQTT (не публікувати назад).
-export function applyRemoteSettings(size, displayTheme, mode, speed) {
+export function applyRemoteSettings(size, displayTheme, mode, speed, lineHeight) {
   currentSize = parseFloat(size) || 1;
   store.set(LS_SIZE, String(currentSize));
   updateSizeValue();
@@ -71,18 +78,25 @@ export function applyRemoteSettings(size, displayTheme, mode, speed) {
     store.set(LS_SPEED, String(currentSpeed));
     updateSpeedValue();
   }
+  if (lineHeight != null) {
+    currentLineHeight = parseInt(lineHeight, 10) || DEFAULT_LINEHEIGHT;
+    store.set(LS_LINEHEIGHT, String(currentLineHeight));
+    updateLineHeightValue();
+  }
 }
 
-// hooks: { onSizeChange, onModeChange, onSpeedChange, onShowQr }
+// hooks: { onSizeChange, onModeChange, onSpeedChange, onLineHeightChange, onShowQr }
 export function init(hooks = {}) {
-  const theme  = store.get(LS_THEME, DEFAULT_THEME);
-  currentSize  = parseFloat(store.get(LS_SIZE, DEFAULT_SIZE)) || 1;
-  currentMode  = store.get(LS_MODE, DEFAULT_MODE);
-  currentSpeed = parseInt(store.get(LS_SPEED, String(DEFAULT_SPEED)), 10) || DEFAULT_SPEED;
+  const theme   = store.get(LS_THEME, DEFAULT_THEME);
+  currentSize   = parseFloat(store.get(LS_SIZE, DEFAULT_SIZE)) || 1;
+  currentMode   = store.get(LS_MODE, DEFAULT_MODE);
+  currentSpeed  = parseInt(store.get(LS_SPEED, String(DEFAULT_SPEED)), 10) || DEFAULT_SPEED;
+  currentLineHeight = parseInt(store.get(LS_LINEHEIGHT, String(DEFAULT_LINEHEIGHT)), 10) || DEFAULT_LINEHEIGHT;
   applyTheme(theme);
   updateModeBtns(currentMode);
   updateSizeValue();
   updateSpeedValue();
+  updateLineHeightValue();
 
   $("gear").addEventListener("click", () => {
     $("history-panel")?.classList.remove("open");
@@ -123,6 +137,15 @@ export function init(hooks = {}) {
   }
   $("speed-minus").addEventListener("click", () => updateSpeed(-1));
   $("speed-plus").addEventListener( "click", () => updateSpeed(1));
+
+  function updateLineHeight(delta) {
+    currentLineHeight = Math.min(LINEHEIGHT_MAX, Math.max(LINEHEIGHT_MIN, currentLineHeight + delta));
+    store.set(LS_LINEHEIGHT, String(currentLineHeight));
+    updateLineHeightValue();
+    hooks.onLineHeightChange?.();
+  }
+  $("lh-minus").addEventListener("click", () => updateLineHeight(-1));
+  $("lh-plus").addEventListener( "click", () => updateLineHeight(1));
 
   $("theme-dark").addEventListener( "click", () => applyTheme("dark"));
   $("theme-light").addEventListener("click", () => applyTheme("light"));

@@ -4,9 +4,9 @@
 import {
   FOCUS_DELAY_MS,
   MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
-  DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED,
-  LS_SENDER_THEME, LS_PUSH_THEME, LS_SIZE, LS_MODE, LS_SPEED,
-  SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP,
+  DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED, DEFAULT_LINEHEIGHT,
+  LS_SENDER_THEME, LS_PUSH_THEME, LS_SIZE, LS_MODE, LS_SPEED, LS_LINEHEIGHT,
+  SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP, LINEHEIGHT_MIN, LINEHEIGHT_MAX,
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   ROLE_SENDER
 } from "../config.js";
@@ -50,7 +50,8 @@ export function init() {
   let displayTheme = store.get(LS_PUSH_THEME, DEFAULT_THEME);
   let displaySize  = parseFloat(store.get(LS_SIZE, DEFAULT_SIZE)) || 1;
   let displayMode  = store.get(LS_MODE, DEFAULT_MODE);
-  let displaySpeed = parseInt(store.get(LS_SPEED, String(DEFAULT_SPEED)), 10) || DEFAULT_SPEED;
+  let displaySpeed      = parseInt(store.get(LS_SPEED,      String(DEFAULT_SPEED)),      10) || DEFAULT_SPEED;
+  let displayLineHeight = parseInt(store.get(LS_LINEHEIGHT, String(DEFAULT_LINEHEIGHT)), 10) || DEFAULT_LINEHEIGHT;
 
   // ===================== Синхронізація стану → UI =====================
   function applySenderTheme(theme) {
@@ -88,12 +89,20 @@ export function init() {
     if (el) el.textContent = speed + "/" + SPEED_MAX;
   }
 
+  function applyDisplayLineHeight(lh) {
+    displayLineHeight = lh;
+    store.set(LS_LINEHEIGHT, String(lh));
+    const el = $("sender-lh-value");
+    if (el) el.textContent = lh + "/" + LINEHEIGHT_MAX;
+  }
+
   // Початковий стан UI (тема показується навіть у стані помилки — до перевірки кімнати)
   applySenderTheme(senderTheme);
   applyDisplayTheme(displayTheme);
   applyDisplayMode(displayMode);
   applyDisplaySize(displaySize);
   applyDisplaySpeed(displaySpeed);
+  applyDisplayLineHeight(displayLineHeight);
 
   // ===================== Кімната та ключ =====================
   const room = resolveRoom();
@@ -129,6 +138,7 @@ export function init() {
       displayTheme,
       mode: displayMode,
       speed: displaySpeed,
+      lineHeight: displayLineHeight,
     });
     // Окрема тема velyki/<room>/settings — щоб retained-налаштування не затирались
     // retained-`live` (на одну тему припадає лише один retained-payload).
@@ -183,6 +193,15 @@ export function init() {
   });
   $("sender-speed-plus").addEventListener("click", () => {
     applyDisplaySpeed(Math.min(SPEED_MAX, displaySpeed + 1));
+    publishSettings();
+  });
+
+  $("sender-lh-minus").addEventListener("click", () => {
+    applyDisplayLineHeight(Math.max(LINEHEIGHT_MIN, displayLineHeight - 1));
+    publishSettings();
+  });
+  $("sender-lh-plus").addEventListener("click", () => {
+    applyDisplayLineHeight(Math.min(LINEHEIGHT_MAX, displayLineHeight + 1));
     publishSettings();
   });
 

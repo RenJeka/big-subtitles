@@ -52,6 +52,7 @@ export function init() {
   function syncView() {
     liveView.setMode(settings.getMode());
     liveView.setSpeed(settings.getSpeed());
+    liveView.setLineHeight(settings.getLineHeight());
     // У fit/scroll відновити останній live-текст; tele/marquee стартує з порожнього потоку.
     if (!isMotionMode()) setLive(lastText);
   }
@@ -72,7 +73,7 @@ export function init() {
       if (json === null) return;
       const msg = decode(json);
       if (msg.type === MSG_TYPE_SETTINGS) {
-        settings.applyRemoteSettings(msg.size, msg.displayTheme, msg.mode, msg.speed);
+        settings.applyRemoteSettings(msg.size, msg.displayTheme, msg.mode, msg.speed, msg.lineHeight);
         syncView();
         liveView.refresh();
       } else if (msg.type === MSG_TYPE_COMMIT) {
@@ -91,10 +92,11 @@ export function init() {
   openQrModal();
 
   settings.init({
-    onSizeChange:  () => liveView.refresh(),
-    onModeChange:  syncView,
-    onSpeedChange: () => liveView.setSpeed(settings.getSpeed()),
-    onShowQr:      openQrModal,
+    onSizeChange:      () => liveView.refresh(),
+    onModeChange:      syncView,
+    onSpeedChange:     () => liveView.setSpeed(settings.getSpeed()),
+    onLineHeightChange: () => liveView.setLineHeight(settings.getLineHeight()),
+    onShowQr:          openQrModal,
   });
 
   // ===================== Панелі та resize =====================

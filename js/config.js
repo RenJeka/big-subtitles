@@ -18,8 +18,8 @@ export const KEEPALIVE_SEC = 30;
 // Типи повідомлень протоколу
 export const MSG_TYPE_LIVE = "live";
 export const MSG_TYPE_COMMIT = "commit";
-// Налаштування: Sender надсилає Display розмір + тему + режим показу + швидкість
-// (payload: {type, size, displayTheme, mode, speed}, retain:true)
+// Налаштування: Sender надсилає Display розмір + тему + режим показу + швидкість + висоту рядка
+// (payload: {type, size, displayTheme, mode, speed, lineHeight}, retain:true)
 export const MSG_TYPE_SETTINGS = "settings";
 
 // ===================== Присутність (presence) =====================
@@ -45,7 +45,8 @@ export const LS_WAKE = "velyki.wakeDismissed";
 export const LS_SENDER_THEME = "velyki.senderTheme"; // власна тема Sender
 export const LS_PUSH_THEME = "velyki.pushTheme";     // тема Display, яку Sender хоче надіслати
 export const LS_MODE = "velyki.mode";    // режим показу live-тексту Display
-export const LS_SPEED = "velyki.speed";  // швидкість авто-руху (суфлер/бігуча строка)
+export const LS_SPEED = "velyki.speed";      // швидкість авто-руху (суфлер/бігуча строка)
+export const LS_LINEHEIGHT = "velyki.lineheight"; // висота рядка live-тексту
 export const LS_KEY = "velyki.key";      // E2E-ключ кімнати (base64url, парний до LS_ROOM)
 
 // ===================== E2E-шифрування (AES-GCM) =====================
@@ -95,6 +96,18 @@ export const TELE_PX_BASE = 8;      // рівень 1 ≈ 8 px/с («дуже п
 export const TELE_PX_STEP = 12;     // рівень 6 ≈ 68 px/с, рівень 12 ≈ 140 px/с
 export const MARQUEE_PX_BASE = 30;  // бігучка трохи жвавіша за суфлер
 export const MARQUEE_PX_STEP = 24;
+
+// Висота рядка live-тексту (кроки 1–30): lh = 0.8 + (step-1)*0.05.
+// Крок 1 → 0.80; крок 10 (дефолт) → 1.25; крок 30 → 2.25.
+export const LINEHEIGHT_MIN = 1;
+export const LINEHEIGHT_MAX = 30;
+export const DEFAULT_LINEHEIGHT = 10;
+
+// ===================== Розділювачі між повідомленнями (tele / marquee) =====================
+
+export const SEP_COLOR = "#0c962fff";    // зелений розділювач
+export const SEP_TELE_CHAR = "◆";     // символ у центрі суфлер-розділювача
+export const SEP_MARQUEE_CHAR = "◆";  // символ між повідомленнями бігучки
 
 // Фіксований шрифт у scroll/tele/marquee:
 // fontPx = max(FIT_MIN_FONT_PX, round(size * SCROLL_FONT_RATIO * min(wrapW, wrapH)))
