@@ -30,45 +30,20 @@ import {
   MOTION_SCROLL_RESUME_MS
 } from "./config.js";
 import { fit } from "./fit-text.js";
+import { innerSize, prefersReducedMotion } from "./utils.js";
 
 const ALL_MODE_CLASSES = ["mode-fit", "mode-scroll", "mode-tele", "mode-marquee"];
 
-/**
- * @param {'tele'|'marquee'} mode 
- * @param {number} speed @returns {number} px/s for the given mode and speed level
- */
+// px/с для заданого режиму та рівня швидкості.
 function pxPerSec(mode, speed) {
   if (mode === MODE_MARQUEE) return MARQUEE_PX_BASE + (speed - 1) * MARQUEE_PX_STEP;
   return TELE_PX_BASE + (speed - 1) * TELE_PX_STEP;
 }
 
-/**
- * @param {HTMLElement} wrapEl 
- * @param {number} size scale factor 
- * @returns {number} font-size px for scroll/tele/marquee
- */
+// Розмір шрифту (px) для scroll/tele/marquee залежно від розміру контейнера і scale.
 function scrollFontPx(wrapEl, size) {
   const base = Math.min(wrapEl.clientWidth, wrapEl.clientHeight);
   return Math.max(FIT_MIN_FONT_PX, Math.round(size * SCROLL_FONT_RATIO * base));
-}
-
-/**
- * @param {HTMLElement} el 
- * @returns {{w:number, h:number}} inner content area (clientW/H minus CSS padding)
- */
-function innerSize(el) {
-  const s = getComputedStyle(el);
-  return {
-    w: el.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight),
-    h: el.clientHeight - parseFloat(s.paddingTop) - parseFloat(s.paddingBottom)
-  };
-}
-
-/**
- * @returns {boolean} whether the user has requested reduced motion via system settings
- */
-function prefersReducedMotion() {
-  return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
 
 /**
