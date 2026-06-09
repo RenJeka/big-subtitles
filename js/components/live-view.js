@@ -250,7 +250,8 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       sW: liveEl.scrollWidth, cW: wrapEl.clientWidth,
       kids: liveEl.children.length, speed: speed
     });
-    startTick(); // ТИМЧАСОВО: почати неперервний семпл позиції
+    // startTick(); ВИМКНЕНО: постійний rAF/getComputedStyle маскував баг (міняв
+    // animationcancel↔animationend). Перевіряємо фікс у реальних умовах, без семплера.
   }
 
   /**
@@ -259,8 +260,19 @@ export function createLiveView(liveEl, wrapEl, getSize) {
    * so this handler is already superseded in that case.
    */
   function onMotionEnd(e) {
-    logEvent("animationend", { anim: e && e.animationName, animating: animating, raw: rawTransform() });
+    // Скільки часу РЕАЛЬНО минуло від (віртуального) старту поточної анімації.
+    const elapsed = animDurMs ? (nowMs() - effStart) : -1;
+    // Подія, що прийшла помітно раніше за справжній кінець, — фантом від щойно
+    // СКАСОВАНОЇ анімації (новим повідомленням), а не природне завершення. Safari
+    // інколи кидає її як animationend замість animationcancel. Вбивати рух на ній
+    // НЕ можна — інакше щойно запущена нова анімація застигає (баг «стоп через одне»).
+    const premature = animDurMs > 0 && elapsed < animDurMs - 80;
+    logEvent("animationend", {
+      anim: e && e.animationName, animating: animating,
+      elapsed: elapsed, dur: animDurMs, premature: premature, raw: rawTransform()
+    });
     if (!isMotion() || !animating) return;
+    if (premature) return; // фантом скасованої анімації — лишаємо нову анімацію жити
     animating = false;
     restStatic();
   }
