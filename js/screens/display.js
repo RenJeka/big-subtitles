@@ -33,19 +33,23 @@ export function init() {
   }
 
   // ===================== Live-view та історія =====================
-  const liveEl    = $("live");
-  const liveWrap  = $("live-wrap");
-  const liveView  = createLiveView(liveEl, liveWrap, settings.getSize);
-  let   lastText  = ""; // для fit/scroll; tele/marquee керує власним потоком
+  const liveEl = $("live");
+  const liveWrap = $("live-wrap");
+  const liveView = createLiveView(liveEl, liveWrap, settings.getSize);
+  let lastText = ""; // для fit/scroll; tele/marquee керує власним потоком
 
   function setLive(text) {
     lastText = text || "";
     if (text && text.length) {
-      liveEl.classList.remove("placeholder");
+      const ph = liveEl.querySelector(".vs-placeholder");
+      if (ph) ph.remove();
       liveView.setText(text);
-    } else {
-      liveEl.classList.add("placeholder");
-      liveView.setText(TEXT_PLACEHOLDER);
+    } else if (!isMotionMode()) {
+      liveEl.textContent = "";
+      const ph = document.createElement("span");
+      ph.className = "vs-placeholder";
+      ph.textContent = TEXT_PLACEHOLDER;
+      liveEl.appendChild(ph);
     }
   }
 
@@ -92,18 +96,18 @@ export function init() {
   openQrModal();
 
   settings.init({
-    onSizeChange:      () => liveView.refresh(),
-    onModeChange:      syncView,
-    onSpeedChange:     () => liveView.setSpeed(settings.getSpeed()),
+    onSizeChange: () => liveView.refresh(),
+    onModeChange: syncView,
+    onSpeedChange: () => liveView.setSpeed(settings.getSpeed()),
     onLineHeightChange: () => liveView.setLineHeight(settings.getLineHeight()),
-    onShowQr:          openQrModal,
+    onShowQr: openQrModal,
   });
 
   // ===================== Панелі та resize =====================
-  bindOutsideClose($("settings"),     $("gear"),        $("history-btn"));
+  bindOutsideClose($("settings"), $("gear"), $("history-btn"));
   bindOutsideClose($("history-panel"), $("history-btn"), $("gear"));
 
-  window.addEventListener("resize",            () => liveView.refresh());
+  window.addEventListener("resize", () => liveView.refresh());
   window.addEventListener("orientationchange", () => setTimeout(() => liveView.refresh(), ORIENTATION_DELAY_MS));
 
   syncView();
