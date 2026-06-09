@@ -103,6 +103,12 @@ export const LINEHEIGHT_MIN = 1;
 export const LINEHEIGHT_MAX = 30;
 export const DEFAULT_LINEHEIGHT = 10;
 
+// ===================== Розділювачі між повідомленнями (tele / marquee) =====================
+
+export const SEP_COLOR = "#0c962fff";    // зелений розділювач
+export const SEP_TELE_CHAR = "◆";     // символ у центрі суфлер-розділювача
+export const SEP_MARQUEE_CHAR = "◆";  // символ між повідомленнями бігучки
+
 // Фіксований шрифт у scroll/tele/marquee:
 // fontPx = max(FIT_MIN_FONT_PX, round(size * SCROLL_FONT_RATIO * min(wrapW, wrapH)))
 export const SCROLL_FONT_RATIO = 0.18;

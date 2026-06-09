@@ -27,7 +27,8 @@ import {
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   TELE_PX_BASE, TELE_PX_STEP, MARQUEE_PX_BASE, MARQUEE_PX_STEP,
   SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED, DEFAULT_LINEHEIGHT,
-  MOTION_SCROLL_RESUME_MS
+  MOTION_SCROLL_RESUME_MS,
+  SEP_COLOR, SEP_TELE_CHAR, SEP_MARQUEE_CHAR
 } from "../config.js";
 import { fit } from "../utils/fit-text.js";
 import { innerSize, prefersReducedMotion } from "../utils/utils.js";
@@ -274,6 +275,13 @@ export function createLiveView(liveEl, wrapEl, getSize) {
 
   /** @param {string} text Appends a .vs-msg div with text to the end of the motion stream. */
   function appendMessage(text) {
+    if (liveEl.children.length > 0) {
+      const sep = document.createElement("div");
+      sep.className = "vs-sep";
+      sep.textContent = mode === MODE_TELE ? SEP_TELE_CHAR : SEP_MARQUEE_CHAR;
+      sep.style.color = SEP_COLOR;
+      liveEl.appendChild(sep);
+    }
     const el = document.createElement("div");
     el.className = "vs-msg";
     el.textContent = text;
