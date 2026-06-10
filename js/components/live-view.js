@@ -32,6 +32,7 @@ import {
 } from "../config.js";
 import { fit } from "../utils/fit-text.js";
 import { innerSize, prefersReducedMotion } from "../utils/utils.js";
+import { logEvent } from "../utils/debug-log.js"; // ТИМЧАСОВО: діагностика бага суфлера на Safari 15
 
 const ALL_MODE_CLASSES = ["mode-fit", "mode-scroll", "mode-tele", "mode-marquee"];
 
@@ -68,6 +69,58 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   let scrubbing = false;  // користувач вручну скролить — авто-рух на паузі
   let resumeTimer = null; // таймер відновлення авто-руху після бездіяльності
 
+  // ТИМЧАСОВО (діагностика): паралельне аналітичне відстеження поточного зсуву,
+  // незалежне від getComputedStyle. effStart — «віртуальний» момент старту з
+  // урахуванням від'ємного delay (може бути в минулому); рух лінійний.
+  let dbgMsgN = 0, animSeq = 0;
+  let effStart = 0, animFrom = 0, animTo = 0, animDurMs = 0;
+  function nowMs() { return (typeof performance !== "undefined" && performance.now) ? performance.now() : Date.now(); }
+  function analyticOffset() {
+    if (!animDurMs) return null;
+    let p = (nowMs() - effStart) / animDurMs;
+    if (p < 0) p = 0; else if (p > 1) p = 1;
+    return animFrom + (animTo - animFrom) * p;
+  }
+  function rawTransform() {
+    try {
+      const t = getComputedStyle(liveEl).transform;
+      return (!t || t === "none") ? "none" : t.replace(/\s+/g, "");
+    } catch (e) { return "ERR:" + e; }
+  }
+  // ТИМЧАСОВО (діагностика): неперервний семпл реальної позиції під час руху.
+  // Ловить стопор МІЖ повідомленнями — якщо computed завмре, а analytic поповзе далі,
+  // diff почне зростати (ось він баг). ~120 мс крок, щоб не спамити кожен кадр.
+  // Покадровий семплер: логуємо НЕ кожен кадр (щоб не спамити), а лише аномалії —
+  // коли рух ЗАВМЕР (позиція не змінюється два кадри поспіль) або ВІДХИЛИВСЯ від
+  // аналітичної моделі (|computed−analytic|>DRIFT). Плюс рідкісний heartbeat, щоб
+  // бачити, що рух узагалі живий. frames рахує реальну частоту кадрів між подіями.
+  const DRIFT_PX = 6;
+  let rafId = 0, hbT = 0, prevC = null, frames = 0, stuckRun = 0;
+  function tickLoop() {
+    if (!animating) { rafId = 0; return; }
+    frames++;
+    const t = nowMs();
+    const c = readTranslate();
+    const a = analyticOffset();
+    const stuck = (prevC != null && c != null && Math.abs(c - prevC) < 0.01);
+    const drift = (c != null && a != null && Math.abs(c - a) > DRIFT_PX);
+    if (stuck) stuckRun++; else stuckRun = 0;
+    // Логуємо: початок завмирання (2-й однаковий кадр), будь-яке відхилення, або heartbeat.
+    if (stuckRun === 2 || drift || (t - hbT >= 500)) {
+      hbT = t;
+      logEvent(stuck ? "tick-STUCK" : (drift ? "tick-DRIFT" : "tick"), {
+        computed: c == null ? "null" : c,
+        analytic: a == null ? "null" : a,
+        diff: (c != null && a != null) ? (c - a) : "n/a",
+        stuckFrames: stuckRun, frames: frames
+      });
+    }
+    prevC = c;
+    rafId = requestAnimationFrame(tickLoop);
+  }
+  function startTick() { if (!rafId) { hbT = 0; prevC = null; frames = 0; stuckRun = 0; rafId = requestAnimationFrame(tickLoop); } }
+  function stopTick() { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } }
+
   /** @returns {boolean} true when current mode produces continuous stream motion */
   function isMotion() { return mode === MODE_TELE || mode === MODE_MARQUEE; }
 
@@ -83,12 +136,17 @@ export function createLiveView(liveEl, wrapEl, getSize) {
    */
   function motionEndpoints() {
     let from, to;
+    // Кінцева точка прив'язана до НАЙНОВІШОГО повідомлення (останній .vs-msg), а не
+    // до краю всього потоку. Стрічка тече безперервно: старі повідомлення виповзають
+    // за верхню (ліву) межу, а найновіше доходить до верху (лівого краю) і там
+    // тримається (не зникає). Так рух не застигає «на півдорозі» між повідомленнями.
+    const last = liveEl.lastElementChild;
     if (mode === MODE_MARQUEE) {
       from = wrapEl.clientWidth;
-      to = Math.min(0, wrapEl.clientWidth - liveEl.scrollWidth);
+      to = Math.min(0, last ? -last.offsetLeft : 0);
     } else {
       from = wrapEl.clientHeight;
-      to = Math.min(0, wrapEl.clientHeight - liveEl.scrollHeight);
+      to = Math.min(0, last ? -last.offsetTop : 0);
     }
     return { from: from, to: to, distance: from - to };
   }
@@ -120,6 +178,9 @@ export function createLiveView(liveEl, wrapEl, getSize) {
   function restStatic() {
     liveEl.style.animation = "none";
     liveEl.style.transform = hasContent ? axisTransform(motionEndpoints().to) : "";
+    animDurMs = 0; // ТИМЧАСОВО: зупиняємо аналітичний відлік
+    stopTick();
+    logEvent("restStatic", { hasContent: hasContent, to: hasContent ? motionEndpoints().to : "" });
   }
 
   /**
@@ -132,17 +193,24 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     if (!hasContent) {                  // нема тексту — нема руху
       liveEl.style.animation = "none";
       liveEl.style.transform = "";
+      logEvent("setAnim-skip", { reason: "noContent" });
       return;
     }
     const ep = motionEndpoints();
     const dur = Math.max(1, ep.distance / pxPerSec(mode, speed)); // сек, сталий px/с
 
+    // ТИМЧАСОВО (діагностика): зчитуємо позицію ДВОМА способами для порівняння.
+    const curComputed = readTranslate();         // через getComputedStyle (підозрюваний)
+    const curAnalytic = analyticOffset();         // через час старту (еталон)
+    const rawT = rawTransform();
+    const prevAnim = liveEl.style.animation || "";
+
     // Продовження: обчислюємо пройдену частку p від поточного зсуву й вносимо її як
     // від'ємний animation-delay у ті самі keyframes (full from→to). Так рух не «стрибає»
     // на старт при додаванні повідомлення / зміні швидкості/розміру.
-    let delay = 0;
+    let delay = 0, pUsed = null;
     if (continueFromCurrent && ep.distance > 0) {
-      const cur = readTranslate();
+      const cur = curComputed;
       if (cur != null) {
         let p = (ep.from - cur) / ep.distance;
         // Затиснути в [0,1], а НЕ скидати на старт. Раніше p>=1 (потік застиг біля
@@ -152,6 +220,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
         // (рух продовжується з поточної позиції, без стрибка вниз).
         if (p < 0) p = 0;
         else if (p > 1) p = 1;
+        pUsed = p;
         delay = -p * dur;
       }
     }
@@ -167,6 +236,27 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     liveEl.style.animation = "none";
     void liveEl.offsetWidth;
     liveEl.style.animation = name + " " + dur + "s linear " + delay + "s 1 forwards";
+
+    // ТИМЧАСОВО (діагностика): оновлюємо аналітичний стан і логуємо все.
+    animSeq++;
+    animDurMs = dur * 1000;
+    animFrom = ep.from;
+    animTo = ep.to;
+    effStart = nowMs() + delay * 1000; // delay<0 → старт у минулому
+    logEvent("setAnim", {
+      seq: animSeq, contFrom: continueFromCurrent,
+      from: ep.from, to: ep.to, dist: ep.distance, dur: dur, delay: delay,
+      pUsed: pUsed == null ? "null" : pUsed,
+      cur_computed: curComputed == null ? "null" : curComputed,
+      cur_analytic: curAnalytic == null ? "null" : curAnalytic,
+      diff: (curComputed != null && curAnalytic != null) ? (curComputed - curAnalytic) : "n/a",
+      rawT: rawT, prevAnim: '"' + prevAnim + '"',
+      sH: liveEl.scrollHeight, cH: wrapEl.clientHeight,
+      sW: liveEl.scrollWidth, cW: wrapEl.clientWidth,
+      kids: liveEl.children.length, speed: speed
+    });
+    // startTick(); ВИМКНЕНО: постійний rAF/getComputedStyle маскував баг (міняв
+    // animationcancel↔animationend). Перевіряємо фікс у реальних умовах, без семплера.
   }
 
   /**
@@ -174,12 +264,32 @@ export function createLiveView(liveEl, wrapEl, getSize) {
    * If a new message arrived mid-flight the old animation fires animationcancel instead,
    * so this handler is already superseded in that case.
    */
-  function onMotionEnd() {
+  function onMotionEnd(e) {
+    // Скільки часу РЕАЛЬНО минуло від (віртуального) старту поточної анімації.
+    const elapsed = animDurMs ? (nowMs() - effStart) : -1;
+    // Подія, що прийшла помітно раніше за справжній кінець, — фантом від щойно
+    // СКАСОВАНОЇ анімації (новим повідомленням), а не природне завершення. Safari
+    // інколи кидає її як animationend замість animationcancel. Вбивати рух на ній
+    // НЕ можна — інакше щойно запущена нова анімація застигає (баг «стоп через одне»).
+    const premature = animDurMs > 0 && elapsed < animDurMs - 80;
+    logEvent("animationend", {
+      anim: e && e.animationName, animating: animating,
+      elapsed: elapsed, dur: animDurMs, premature: premature, raw: rawTransform()
+    });
     if (!isMotion() || !animating) return;
+    if (premature) return; // фантом скасованої анімації — лишаємо нову анімацію жити
     animating = false;
     restStatic();
   }
   liveEl.addEventListener("animationend", onMotionEnd);
+  // ТИМЧАСОВО (діагностика): фіксуємо весь життєвий цикл CSS-анімації, зокрема
+  // animationcancel — щоб побачити, чи скасування старої анімації не «вбиває» нову.
+  liveEl.addEventListener("animationstart", function (e) {
+    logEvent("animationstart", { anim: e.animationName, raw: rawTransform() });
+  });
+  liveEl.addEventListener("animationcancel", function (e) {
+    logEvent("animationcancel", { anim: e.animationName, animating: animating, raw: rawTransform() });
+  });
 
   // ---- Ручний скрол назад + автопауза/автовідновлення ----
 
@@ -217,6 +327,8 @@ export function createLiveView(liveEl, wrapEl, getSize) {
    */
   function enterScrub() {
     const tx = readTranslate();
+    logEvent("enterScrub", { tx: tx == null ? "null" : tx, analytic: analyticOffset() });
+    stopTick();
     animating = false;
     scrubbing = true;
     liveEl.style.animation = "none";
@@ -253,6 +365,7 @@ export function createLiveView(liveEl, wrapEl, getSize) {
     if (tx > 0) tx = 0;
     if (tx < ep.to) tx = ep.to;
     liveEl.style.transform = axisTransform(tx); // continueFromCurrent прочитає його
+    logEvent("resume", { scroll: s, tx: tx, epTo: ep.to });
     animating = true;
     setMotionAnim(true);
   }
@@ -366,11 +479,18 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       appendMessage(text);
       hasContent = true;
       applyMotionFont();
+      dbgMsgN++;
+      logEvent("showLine", {
+        msgN: dbgMsgN, len: text.length, wasEmpty: wasEmpty,
+        scrubbing: scrubbing, prm: prefersReducedMotion(), animating: animating,
+        kids: liveEl.children.length, mode: mode
+      });
       // Користувач читає старе (ручний скрол): тихо лишаємо нове в кінці потоку,
       // не зриваючи паузу — автопрокрутка наздожене його після відновлення.
       if (scrubbing) return;
       if (prefersReducedMotion()) {
         animating = false;
+        stopTick();
         liveEl.style.animation = "none";
         liveEl.style.transform = "";
         return;
@@ -416,6 +536,19 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       lineHeightStep = step || DEFAULT_LINEHEIGHT;
       liveEl.style.lineHeight = lhValue(lineHeightStep);
       doRefresh();
+    },
+
+    /**
+     * Clears all content from the live view and resets animation state.
+     * Works for all modes: fit/scroll content removed, tele/marquee stream flushed.
+     */
+    clear() {
+      clearResumeTimer();
+      scrubbing = false;
+      animating = false;
+      hasContent = false;
+      liveEl.textContent = "";
+      resetStyles();
     }
   };
 }

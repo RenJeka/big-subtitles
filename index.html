@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Andika:ital,wght@0,400;0,700;1,400&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-  <link rel="stylesheet" href="css/styles.css?v=7">
+  <link rel="stylesheet" href="css/styles.css?v=11">
 </head>
 
 <body>
@@ -27,11 +27,11 @@
 
       <div class="start-actions">
         <button class="start-btn" id="btn-display">
-          <span class="start-icon icon-display"></span>
+          <img class="start-icon start-icon-display" src="assets/display.svg" alt="" />
           <span>Я — Дисплей (iPad)</span>
         </button>
         <button class="start-btn secondary" id="btn-sender">
-          <span class="start-icon icon-sender"></span>
+          <img class="start-icon start-icon-sender" src="assets/sender.svg" alt="" />
           <span>Я — пишу (телефон)</span>
         </button>
       </div>
@@ -98,6 +98,14 @@
           <span>Показати QR</span>
         </button>
       </div>
+      <!-- ТИМЧАСОВО: діагностика бага анімації суфлера на Safari 15. Прибрати після фіксу. -->
+      <label>Діагностика</label>
+      <div class="settings-grid">
+        <button id="copy-log" class="secondary"><span class="btn-emoji">📋</span><span>Копіювати лог</span></button>
+        <button id="clear-log" class="secondary outline"><span class="btn-emoji">🗑️</span><span>Очистити лог</span></button>
+      </div>
+      <textarea id="debug-log-out" class="hidden" readonly rows="8"
+        style="width:100%;font-family:monospace;font-size:11px;white-space:pre;"></textarea>
     </div>
 
     <div id="history-panel" class="history-panel">
@@ -195,9 +203,19 @@
     <div class="sender-input-wrap">
       <textarea id="input" placeholder="Пишіть тут…  (Enter — новий рядок на дисплеї)" autocapitalize="sentences"
         autocomplete="off" autocorrect="on" lang="uk"></textarea>
-      <div class="grid action-buttons">
-        <button id="clear-btn" class="btn-clear">Очистити</button>
-        <button id="send-btn" class="btn-send">Відправити</button>
+      <div class="action-buttons">
+        <button id="clear-display-btn" class="btn-clear-display">
+          <img class="btn-icon" src="assets/clear.svg" alt="" />
+          Дисплей
+        </button>
+        <button id="clear-input-btn" class="btn-clear-input">
+          <img class="btn-icon" src="assets/clear.svg" alt="" />
+          Поле
+        </button>
+        <button id="send-btn" class="btn-send">
+          <img class="btn-icon" src="assets/send.svg" alt="" />
+          Відправити
+        </button>
       </div>
     </div>
   </section>

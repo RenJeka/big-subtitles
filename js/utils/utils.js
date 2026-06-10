@@ -165,7 +165,14 @@ export function createHistory(listEl, emptyEl, onPick) {
     if (line && line !== listEl) onPick(line.textContent);
   });
   updateEmptyHint();
-  return { append };
+  return {
+    append,
+    /** Видаляє всі рядки та відображає заглушку «порожньо». */
+    clear() {
+      while (listEl.firstChild) listEl.removeChild(listEl.firstChild);
+      updateEmptyHint();
+    }
+  };
 }
 
 // Підсвітити активну кнопку режиму показу: активна — без класу, решта — "secondary outline".

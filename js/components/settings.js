@@ -7,6 +7,7 @@ import {
 } from "../config.js";
 import * as store from "../utils/store.js";
 import { $, highlightModeButtons } from "../utils/utils.js";
+import { dumpLog, clearLog } from "../utils/debug-log.js"; // ТИМЧАСОВО: діагностика бага суфлера
 
 let currentSize       = 1;
 let currentMode       = DEFAULT_MODE;
@@ -154,6 +155,40 @@ export function init(hooks = {}) {
     hooks.onShowQr?.();
     $("settings").classList.remove("open");
   });
+
+  // ТИМЧАСОВО: діагностика бага анімації суфлера на Safari 15.
+  // Копіювання: спершу Clipboard API, далі fallback на execCommand, і в будь-якому
+  // разі показуємо textarea з виділеним текстом (на iPad через http://<IP> Clipboard
+  // API недоступний — лишається ручне «Виділити все → Копіювати»).
+  const logOut = $("debug-log-out");
+  const copyBtn = $("copy-log");
+  if (copyBtn && logOut) {
+    copyBtn.addEventListener("click", () => {
+      const text = dumpLog();
+      logOut.classList.remove("hidden");
+      logOut.value = text;
+      logOut.focus();
+      logOut.select();
+      let ok = false;
+      try { ok = document.execCommand && document.execCommand("copy"); } catch (e) { ok = false; }
+      const done = (label) => {
+        const span = copyBtn.querySelector("span:last-child");
+        if (span) { const prev = span.textContent; span.textContent = label; setTimeout(() => { span.textContent = prev; }, 1500); }
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => done("Скопійовано ✓"), () => done(ok ? "Скопійовано ✓" : "Виділіть вручну"));
+      } else {
+        done(ok ? "Скопійовано ✓" : "Виділіть вручну");
+      }
+    });
+  }
+  const clearBtn = $("clear-log");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      clearLog();
+      if (logOut) { logOut.value = ""; logOut.classList.add("hidden"); }
+    });
+  }
 
   // Банер автоблокування (одноразовий)
   if (!store.get(LS_WAKE, null)) $("wake-hint").classList.add("show");
