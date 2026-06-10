@@ -1,7 +1,7 @@
 // Режим Display (iPad): великий автомасштабований live-текст, історія, QR-модал.
 // Тема/розмір/банер делеговано в settings, автомасштаб — у fit-text.
 import {
-  ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
+  ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS, MSG_TYPE_CLEAR,
   TEXT_PLACEHOLDER, ROLE_DISPLAY, MODE_TELE, MODE_MARQUEE
 } from "../config.js";
 import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal, closeQrModal, bindOutsideClose, createHistory } from "../utils/utils.js";
@@ -84,6 +84,12 @@ export function init() {
         history.append(msg.text);
         if (isMotionMode()) liveView.showLine(msg.text);
         else setLive(msg.text);
+      } else if (msg.type === MSG_TYPE_CLEAR) {
+        // Очистити live-текст і історію на Display
+        history.clear();
+        lastText = "";
+        liveView.clear();
+        setLive("");
       }
       // MSG_TYPE_LIVE ігнорується — Display показує лише зафіксовані рядки (commit).
     });

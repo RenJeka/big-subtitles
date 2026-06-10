@@ -1,6 +1,10 @@
 /* sender.css — режим Sender (#screen-sender): поле вводу та кнопки дій. */
 
-#screen-sender { flex-direction: column; padding: 16px; }
+#screen-sender {
+  flex-direction: column;
+  padding: 16px;
+}
+
 /* sender-gear і sender-settings успадковують загальні .toolbar / .toolbar-btn / .settings-panel */
 
 /* Обгортка поля вводу: заповнює екран під тулбаром. */
@@ -28,28 +32,68 @@
   margin-bottom: 0;
 }
 
-.btn-clear, .btn-send {
-  flex: 1;
-  padding: 24px 16px !important;
-  font-size: 1.25rem !important;
+/* Спільні властивості всіх кнопок дій */
+.btn-clear-display,
+.btn-clear-input,
+.btn-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-weight: 700 !important;
   border-radius: 16px !important;
   border: none !important;
   color: #fff !important;
   transition: filter 0.15s ease, transform 0.1s ease !important;
+  white-space: nowrap;
 }
-.btn-clear:active, .btn-send:active {
+
+.btn-clear-display:active,
+.btn-clear-input:active,
+.btn-send:active {
   transform: scale(0.96);
 }
-.btn-clear {
-  background-color: var(--err) !important;
+
+/* Inline SVG іконка у кнопках */
+.btn-icon {
+  width: 2em;
+  height: 2em;
+  filter: invert(1);
+  flex-shrink: 0;
 }
-.btn-clear:hover {
-  filter: brightness(1.1);
+
+/* Кнопки очищення — менші */
+.btn-clear-display,
+.btn-clear-input {
+  flex: 0.7;
+  padding: 16px 8px !important;
+  font-size: 0.95rem !important;
 }
+
+.btn-clear-display {
+  background-color: var(--btn-clear-display, #4f39f6) !important;
+}
+
+.btn-clear-display:hover {
+  filter: brightness(1.15);
+}
+
+.btn-clear-input {
+  background-color: var(--btn-clear-input, #fb2c36) !important;
+}
+
+.btn-clear-input:hover {
+  filter: brightness(1.15);
+}
+
+/* Кнопка відправки — більша */
 .btn-send {
+  flex: 1.2;
+  padding: 24px 12px !important;
+  font-size: 1.2rem !important;
   background-color: var(--ok) !important;
 }
+
 .btn-send:hover {
   filter: brightness(1.1);
 }

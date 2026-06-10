@@ -74,28 +74,26 @@
   color: var(--fg);
 }
 
-/* Іконки підвантажуються через mask, щоб автоматично фарбуватись у колір тексту (currentColor) */
+/* Картинки-іконки на кнопках */
 .start-icon {
   width: 32px;
   height: 32px;
-  background-color: currentColor;
-  -webkit-mask-size: contain;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
   flex-shrink: 0;
 }
 
-.icon-display {
-  -webkit-mask-image: url('../assets/display.svg');
-  mask-image: url('../assets/display.svg');
+/* Іконка дисплея завжди біла на синьому фоні */
+.start-icon-display {
+  filter: invert(1);
 }
 
-.icon-sender {
-  -webkit-mask-image: url('../assets/sender.svg');
-  mask-image: url('../assets/sender.svg');
+/* Іконка сендера за замовчуванням біла (у темній темі) */
+.start-icon-sender {
+  filter: invert(1);
+}
+
+/* У світлій темі іконка сендера має бути оригінальною чорною */
+[data-theme="light"] .start-icon-sender {
+  filter: none;
 }
 
 .privacy-note {

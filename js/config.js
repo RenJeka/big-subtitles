@@ -21,6 +21,8 @@ export const MSG_TYPE_COMMIT = "commit";
 // Налаштування: Sender надсилає Display розмір + тему + режим показу + швидкість + висоту рядка
 // (payload: {type, size, displayTheme, mode, speed, lineHeight}, retain:true)
 export const MSG_TYPE_SETTINGS = "settings";
+// Очищення Display: Sender надсилає команду прибрати весь live-текст і історію з дисплея.
+export const MSG_TYPE_CLEAR = "clear";
 
 // ===================== Присутність (presence) =====================
 // Кожна роль публікує retained-маркер у власну тему velyki/<room>/presence/<role>
@@ -159,3 +161,10 @@ export const TEXT_STATUS_OFFLINE = "немає мережі…";
 export const TEXT_STATUS_CLOSED = "роз'єднано…";
 export const TEXT_STATUS_ERROR = "помилка з'єднання";
 export const TEXT_STATUS_NO_MQTT = "немає бібліотеки MQTT";
+
+// ===================== Кольори кнопок очищення =====================
+
+// Колір кнопки «Очистити дисплей» (фіолетовий — дія на Display)
+export const BTN_CLEAR_DISPLAY_COLOR = "#4f39f6";
+// Колір кнопки «Очистити поле» (червоний — локальна дія у Sender)
+export const BTN_CLEAR_INPUT_COLOR = "#fb2c36";
