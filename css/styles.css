@@ -9,10 +9,10 @@
    sender.css      — режим Sender: поле вводу, кнопки дій
    qr-modal.css    — спільний модал парування з QR
 
-   ?v=10 — інвалідатор кеша; бампати при зміні партіалів (так само в index.html). */
-@import "base.css?v=10";
-@import "start.css?v=10";
-@import "components.css?v=10";
-@import "display.css?v=10";
-@import "sender.css?v=10";
-@import "qr-modal.css?v=10";
+   ?v=11 — інвалідатор кеша; бампати при зміні партіалів (так само в index.html). */
+@import "base.css?v=11";
+@import "start.css?v=11";
+@import "components.css?v=11";
+@import "display.css?v=11";
+@import "sender.css?v=11";
+@import "qr-modal.css?v=11";
