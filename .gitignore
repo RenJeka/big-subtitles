@@ -4,4 +4,21 @@
 # Скриншоти прев'ю
 display-*.png
 
-/.logs
+# Тестові артефакти Playwright
+.playwright-mcp/
+
+# Скриншоти прев'ю
+display-*.png
+# Тестові артефакти Playwright
+.playwright-mcp/
+
+# Скриншоти прев'ю
+display-*.png
+# Тестові артефакти Playwright
+.playwright-mcp/
+
+# Скриншоти прев'ю
+display-*.png
+
+.logs/
+*.log

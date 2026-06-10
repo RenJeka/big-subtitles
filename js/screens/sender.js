@@ -3,12 +3,13 @@
 // Sender також має власну локальну тему (не синхронізується).
 import {
   FOCUS_DELAY_MS,
-  MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS,
+  MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS, MSG_TYPE_CLEAR,
   DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED, DEFAULT_LINEHEIGHT,
   LS_SENDER_THEME, LS_PUSH_THEME, LS_SIZE, LS_MODE, LS_SPEED, LS_LINEHEIGHT,
   SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP, LINEHEIGHT_MIN, LINEHEIGHT_MAX,
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
-  ROLE_SENDER
+  ROLE_SENDER,
+  BTN_CLEAR_DISPLAY_COLOR, BTN_CLEAR_INPUT_COLOR,
 } from "../config.js";
 import { $, show, resolveRoom, saveRoom, resolveKey, saveKey, setStatus, initQrModal, openQrModal, bindOutsideClose, createHistory, highlightModeButtons } from "../utils/utils.js";
 import { connect, encode } from "../utils/mqtt-client.js";
@@ -44,6 +45,10 @@ function bindViewport() {
 
 export function init() {
   show("screen-sender");
+
+  // Кольори кнопок очищення з конфігу → CSS custom properties на :root
+  document.documentElement.style.setProperty("--btn-clear-display", BTN_CLEAR_DISPLAY_COLOR);
+  document.documentElement.style.setProperty("--btn-clear-input",   BTN_CLEAR_INPUT_COLOR);
 
   // ===================== Стан =====================
   let senderTheme  = store.get(LS_SENDER_THEME, DEFAULT_THEME);
@@ -232,8 +237,17 @@ export function init() {
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitLine(); }
   });
-  $("send-btn").addEventListener(  "click", commitLine);
-  $("clear-btn").addEventListener( "click", () => { input.value = ""; input.focus(); });
+  $("send-btn").addEventListener("click", commitLine);
+
+  // Очистити лише поле вводу (локальна дія)
+  $("clear-input-btn").addEventListener("click", () => { input.value = ""; input.focus(); });
+
+  // Очистити Display: надіслати повідомлення типу "clear" через MQTT
+  $("clear-display-btn").addEventListener("click", () => {
+    if (!conn?.client) return;
+    encrypt(JSON.stringify({ type: MSG_TYPE_CLEAR })).then((payload) =>
+      conn.client.publish(conn.topic, payload, { retain: false, qos: 0 }));
+  });
 
   // ===================== Viewport та фокус =====================
   bindViewport();

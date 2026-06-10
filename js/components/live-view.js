@@ -536,6 +536,19 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       lineHeightStep = step || DEFAULT_LINEHEIGHT;
       liveEl.style.lineHeight = lhValue(lineHeightStep);
       doRefresh();
+    },
+
+    /**
+     * Clears all content from the live view and resets animation state.
+     * Works for all modes: fit/scroll content removed, tele/marquee stream flushed.
+     */
+    clear() {
+      clearResumeTimer();
+      scrubbing = false;
+      animating = false;
+      hasContent = false;
+      liveEl.textContent = "";
+      resetStyles();
     }
   };
 }
