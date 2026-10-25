@@ -13,6 +13,9 @@
   --ok: #34c759;
   --warn: #ff9f0a;
   --err: #ff453a;
+  --sep: #0c962f;               /* розділювач повідомлень у суфлері/бігучці */
+  --btn-clear-display: #4f39f6; /* «Очистити дисплей» — дія на Display */
+  --btn-clear-input: #fb2c36;   /* «Очистити поле» — локальна дія у Sender */
 }
 /* Світла тема */
 [data-theme="light"] {
@@ -51,3 +54,7 @@ html, body {
 .hidden { display: none !important; }
 /* Емодзі-іконка в кнопках налаштувань (замість inline font-size). */
 .btn-emoji { font-size: 1.5rem; }
+/* Іконка (SVG-спрайт через <use>) поряд із текстом кнопки. */
+.icon-inline { vertical-align: middle; }
+/* Прихований контейнер SVG-спрайта: не display:none, щоб <use> гарантовано рендерився. */
+.svg-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }

@@ -184,6 +184,10 @@
   flex-shrink: 0;
 }
 
+.vs-sep {
+  color: var(--sep);
+}
+
 #live-wrap.mode-marquee .vs-msg {
   white-space: nowrap;
 }

@@ -43,7 +43,6 @@
 .settings-panel.open { display: block; }
 .settings-panel label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 6px; font-weight: 700; letter-spacing: 0.02em; }
 .settings-panel label:first-child { margin-top: 0; }
-.settings-panel input[type=range] { width: 100%; accent-color: var(--accent); }
 
 .settings-grid {
   display: grid;

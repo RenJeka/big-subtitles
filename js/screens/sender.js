@@ -1,5 +1,6 @@
 // Режим Sender (телефон): Enter фіксує рядок і надсилає на Display.
-// Sender є «адміністратором» налаштувань Display: надсилає тему + розмір через MQTT.
+// Sender є «адміністратором» налаштувань Display: надсилає розмір, тему, режим показу,
+// швидкість і висоту рядка через MQTT (settings), а також команду очищення (clear).
 // Sender також має власну локальну тему (не синхронізується).
 import {
   FOCUS_DELAY_MS,
@@ -9,7 +10,7 @@ import {
   SPEED_MIN, SPEED_MAX, SIZE_MIN, SIZE_MAX, SIZE_STEP, LINEHEIGHT_MIN, LINEHEIGHT_MAX,
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   ROLE_SENDER,
-  BTN_CLEAR_DISPLAY_COLOR, BTN_CLEAR_INPUT_COLOR,
+  TEXT_STATUS_NO_ROOM, TEXT_STATUS_NO_KEY, TEXT_INPUT_NO_ROOM, TEXT_INPUT_NO_KEY,
 } from "../config.js";
 import { $, show, resolveRoom, saveRoom, resolveKey, saveKey, setStatus, initQrModal, openQrModal, bindOutsideClose, createHistory, highlightModeButtons } from "../utils/utils.js";
 import { connect, encode } from "../utils/mqtt-client.js";
@@ -45,10 +46,6 @@ function bindViewport() {
 
 export function init() {
   show("screen-sender");
-
-  // Кольори кнопок очищення з конфігу → CSS custom properties на :root
-  document.documentElement.style.setProperty("--btn-clear-display", BTN_CLEAR_DISPLAY_COLOR);
-  document.documentElement.style.setProperty("--btn-clear-input",   BTN_CLEAR_INPUT_COLOR);
 
   // ===================== Стан =====================
   let senderTheme  = store.get(LS_SENDER_THEME, DEFAULT_THEME);
@@ -113,9 +110,9 @@ export function init() {
   const room = resolveRoom();
   if (!room) {
     $("input").value       = "";
-    $("input").placeholder = "Немає кімнати. Відскануйте QR з дисплея.";
+    $("input").placeholder = TEXT_INPUT_NO_ROOM;
     $("input").disabled    = true;
-    setStatus($("status-sender"), "err", "немає кімнати");
+    setStatus($("status-sender"), "err", TEXT_STATUS_NO_ROOM);
     return;
   }
   saveRoom(room);
@@ -123,9 +120,9 @@ export function init() {
   const key = resolveKey();
   if (!key) {
     $("input").value       = "";
-    $("input").placeholder = "Немає ключа. Відскануйте QR з дисплея.";
+    $("input").placeholder = TEXT_INPUT_NO_KEY;
     $("input").disabled    = true;
-    setStatus($("status-sender"), "err", "немає ключа");
+    setStatus($("status-sender"), "err", TEXT_STATUS_NO_KEY);
     return;
   }
   saveKey(key);

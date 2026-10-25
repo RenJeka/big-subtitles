@@ -72,7 +72,7 @@
 }
 
 .btn-clear-display {
-  background-color: var(--btn-clear-display, #4f39f6) !important;
+  background-color: var(--btn-clear-display) !important;
 }
 
 .btn-clear-display:hover {
@@ -80,7 +80,7 @@
 }
 
 .btn-clear-input {
-  background-color: var(--btn-clear-input, #fb2c36) !important;
+  background-color: var(--btn-clear-input) !important;
 }
 
 .btn-clear-input:hover {

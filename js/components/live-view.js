@@ -27,8 +27,8 @@ import {
   MODE_FIT, MODE_SCROLL, MODE_TELE, MODE_MARQUEE,
   TELE_PX_BASE, TELE_PX_STEP, MARQUEE_PX_BASE, MARQUEE_PX_STEP,
   SCROLL_FONT_RATIO, FIT_MIN_FONT_PX, DEFAULT_MODE, DEFAULT_SPEED, DEFAULT_LINEHEIGHT,
-  MOTION_SCROLL_RESUME_MS,
-  SEP_COLOR, SEP_TELE_CHAR, SEP_MARQUEE_CHAR
+  LINEHEIGHT_BASE, LINEHEIGHT_STEP, MOTION_SCROLL_RESUME_MS,
+  SEP_TELE_CHAR, SEP_MARQUEE_CHAR
 } from "../config.js";
 import { fit } from "../utils/fit-text.js";
 import { innerSize, prefersReducedMotion } from "../utils/utils.js";
@@ -47,6 +47,11 @@ function scrollFontPx(wrapEl, size) {
   return Math.max(FIT_MIN_FONT_PX, Math.round(size * SCROLL_FONT_RATIO * base));
 }
 
+// Перетворює крок (LINEHEIGHT_MIN–LINEHEIGHT_MAX) у CSS-значення line-height.
+function lhValue(step) {
+  return LINEHEIGHT_BASE + (step - 1) * LINEHEIGHT_STEP;
+}
+
 /**
  * Creates and returns a live-view controller that renders committed text on #live
  * according to the active mode (fit / scroll / tele / marquee).
@@ -54,11 +59,6 @@ function scrollFontPx(wrapEl, size) {
  * @param {HTMLElement} wrapEl - #live-wrap container
  * @param {()=>number} getSize - returns current scale factor (SIZE_MIN..SIZE_MAX)
  */
-// Перетворює крок (1–30) у CSS-значення line-height.
-function lhValue(step) {
-  return 0.8 + (step - 1) * 0.05;
-}
-
 export function createLiveView(liveEl, wrapEl, getSize) {
   let mode            = DEFAULT_MODE;
   let speed           = DEFAULT_SPEED;
@@ -279,7 +279,6 @@ export function createLiveView(liveEl, wrapEl, getSize) {
       const sep = document.createElement("div");
       sep.className = "vs-sep";
       sep.textContent = mode === MODE_TELE ? SEP_TELE_CHAR : SEP_MARQUEE_CHAR;
-      sep.style.color = SEP_COLOR;
       liveEl.appendChild(sep);
     }
     const el = document.createElement("div");

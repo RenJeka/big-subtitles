@@ -1,4 +1,5 @@
-// Панель налаштувань Display: тема, розмір, режим показу, швидкість, банер автоблокування.
+// Панель налаштувань Display: тема, розмір, режим показу, швидкість, висота рядка,
+// кнопки шестірні/історії, банер автоблокування.
 import {
   LS_THEME, LS_SIZE, LS_WAKE, LS_MODE, LS_SPEED, LS_LINEHEIGHT,
   DEFAULT_THEME, DEFAULT_SIZE, DEFAULT_MODE, DEFAULT_SPEED, DEFAULT_LINEHEIGHT,

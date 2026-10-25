@@ -1,5 +1,5 @@
 // Транспорт (MQTT по WebSocket) + протокол повідомлень.
-// Глобал `mqtt` приходить із CDN-скрипта MQTT.js (підключений у index.html).
+// Глобал `mqtt` приходить із self-host скрипта js/vendor/mqtt.min.js (класичний <script> в index.html).
 import {
   BROKER, TOPIC_PREFIX, CLIENT_ID_PREFIX,
   RECONNECT_PERIOD_MS, CONNECT_TIMEOUT_MS, KEEPALIVE_SEC,
@@ -10,9 +10,11 @@ import {
 } from "../config.js";
 import { setStatus } from "./utils.js";
 
-// Протокол повідомлень у темі velyki/<room>:
-//   { type: "live",   text: "..." } — поточний рядок (publish з retain:true)
-//   { type: "commit", text: "..." } — зафіксувати рядок в історію (без retain)
+// Протокол (JSON шифрується в crypto.js перед публікацією):
+//   velyki/<room>:          { type: "commit", text } — рядок у live та історію (без retain)
+//                           { type: "clear" }         — очистити Display (без retain)
+//   velyki/<room>/settings: { type: "settings", size, displayTheme, mode, speed, lineHeight } (retain)
+//   velyki/<room>/presence/<role>: "1" / "" — НЕ шифрується (retain + LWT)
 export function encode(type, text) { return JSON.stringify({ type, text }); }
 
 export function decode(raw) {
@@ -20,7 +22,7 @@ export function decode(raw) {
     const o = JSON.parse(raw);
     if (o && typeof o.type === "string") return o;
   } catch (e) { }
-  // Сумісність: голий текст трактуємо як live
+  // Сумісність: голий текст трактуємо як live (Display такі повідомлення ігнорує)
   return { type: MSG_TYPE_LIVE, text: raw };
 }
 

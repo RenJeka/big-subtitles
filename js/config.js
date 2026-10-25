@@ -16,6 +16,8 @@ export const CONNECT_TIMEOUT_MS = 8000;
 export const KEEPALIVE_SEC = 30;
 
 // Типи повідомлень протоколу
+// live — застарілий «живий набір»: Sender його більше не шле, Display ігнорує
+// (лишається як fallback-тип у mqtt-client.decode).
 export const MSG_TYPE_LIVE = "live";
 export const MSG_TYPE_COMMIT = "commit";
 // Налаштування: Sender надсилає Display розмір + тему + режим показу + швидкість + висоту рядка
@@ -67,8 +69,15 @@ export const ROLE_SENDER = "sender";
 
 // Алфавіт base62 для генерації токена
 export const TOKEN_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-// Довжина токена (24 символи — єдиний «секрет» парування)
+// Довжина токена (24 символи). Назва кімнати НЕ секрет: брокер публічний, і її видно
+// кожному, хто підписався на velyki/#. Конфіденційність тримається лише на E2E-ключі.
 export const TOKEN_LENGTH = 24;
+
+// Валідація значень із URL-фрагмента / localStorage. Некоректне значення ігнорується:
+// кімната з «/», «+» чи «#» перетворилася б на MQTT-тему з wildcard, а битий ключ
+// мовчки ламав би шифрування.
+export const ROOM_PATTERN = /^[A-Za-z0-9]{20,64}$/; // base62, ≥ 20 символів (spec)
+export const KEY_PATTERN = /^[A-Za-z0-9_-]{43}$/;   // base64url без padding від KEY_BYTES = 32
 
 // ===================== Автомасштаб (fit-text) =====================
 
@@ -104,10 +113,12 @@ export const MARQUEE_PX_STEP = 24;
 export const LINEHEIGHT_MIN = 1;
 export const LINEHEIGHT_MAX = 30;
 export const DEFAULT_LINEHEIGHT = 10;
+export const LINEHEIGHT_BASE = 0.8;  // line-height на кроці 1
+export const LINEHEIGHT_STEP = 0.05; // приріст line-height на кожен крок
 
 // ===================== Розділювачі між повідомленнями (tele / marquee) =====================
+// Колір розділювача — CSS-змінна --sep у css/base.css.
 
-export const SEP_COLOR = "#0c962fff";    // зелений розділювач
 export const SEP_TELE_CHAR = "◆";     // символ у центрі суфлер-розділювача
 export const SEP_MARQUEE_CHAR = "◆";  // символ між повідомленнями бігучки
 
@@ -132,8 +143,6 @@ export const QR_CORRECT_LEVEL = "M";  // рівень корекції поми�
 
 // Скільки рядків історії тримати в пам'яті Display
 export const HISTORY_LIMIT = 10;
-// Затримка перед публікацією live-тексту (ms) (live-typing.deprecated.js)
-// export const DEBOUNCE_MS = 150;
 // Затримка після orientationchange перед refit (ms)
 export const ORIENTATION_DELAY_MS = 300;
 // Затримка перед фокусом textarea у sender (ms)
@@ -162,9 +171,8 @@ export const TEXT_STATUS_CLOSED = "роз'єднано…";
 export const TEXT_STATUS_ERROR = "помилка з'єднання";
 export const TEXT_STATUS_NO_MQTT = "немає бібліотеки MQTT";
 
-// ===================== Кольори кнопок очищення =====================
-
-// Колір кнопки «Очистити дисплей» (фіолетовий — дія на Display)
-export const BTN_CLEAR_DISPLAY_COLOR = "#4f39f6";
-// Колір кнопки «Очистити поле» (червоний — локальна дія у Sender)
-export const BTN_CLEAR_INPUT_COLOR = "#fb2c36";
+// Sender без кімнати/ключа (не відскановано QR або посилання пошкоджене)
+export const TEXT_STATUS_NO_ROOM = "немає кімнати";
+export const TEXT_STATUS_NO_KEY = "немає ключа";
+export const TEXT_INPUT_NO_ROOM = "Немає кімнати. Відскануйте QR з дисплея.";
+export const TEXT_INPUT_NO_KEY = "Немає ключа. Відскануйте QR з дисплея.";

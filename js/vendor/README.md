@@ -12,10 +12,12 @@
 
 ## Версії та оновлення
 
-| Файл            | Бібліотека            | Версія / джерело                                                        |
-|-----------------|-----------------------|-------------------------------------------------------------------------|
-| `mqtt.min.js`   | MQTT.js               | 5.15.1 — `https://unpkg.com/mqtt@5.15.1/dist/mqtt.min.js`                |
-| `qrcode.min.js` | qrcodejs (davidshimjs) | `https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js`        |
+| Файл            | Бібліотека             | Версія / джерело                                                  | SHA-256 |
+|-----------------|------------------------|-------------------------------------------------------------------|---------|
+| `mqtt.min.js`   | MQTT.js                | 5.15.1 — `https://unpkg.com/mqtt@5.15.1/dist/mqtt.min.js`          | `78bcdb4249902812d8e130635c0b51604e96263dc4d27f1d87090899daa13ec7` |
+| `qrcode.min.js` | qrcodejs (davidshimjs) | без версії (master) — `https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js` | `c541ef06327885a8415bca8df6071e14189b4855336def4f36db54bde8484f36` |
+
+Перевірка, що файли не змінились: `sha256sum js/vendor/*.js` — звірити з таблицею.
 
 Оновлення вручну (звіряти сумісність із Safari 15 і наявні глобали/API):
 
@@ -23,4 +25,14 @@
 curl -sL "https://unpkg.com/mqtt@<нова>/dist/mqtt.min.js" -o js/vendor/mqtt.min.js
 ```
 
-Після оновлення `mqtt.min.js` — бампнути версію в цьому файлі та в коментарі `index.html`.
+Після оновлення — бампнути версію й SHA-256 у цій таблиці та коментар в `index.html`.
+
+Відомо: MQTT.js 5.15.1 викликає `Array.prototype.at()` (Safari 15.4+) у колбеку `subscribe`.
+На Safari 15.0–15.3 це тиха помилка, підписка працює.
+
+## Що лишається на CDN
+
+| Ресурс | Джерело | Чому не self-host (поки що) |
+|---|---|---|
+| Pico CSS | `https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css` (мажорна версія 2, без SRI) | Стилі не виконують код і не мають доступу до ключа; ризик — лише зламаний вигляд при підміні/недоступності CDN |
+| Шрифт Andika | Google Fonts | Те саме; fallback — системний sans-serif |

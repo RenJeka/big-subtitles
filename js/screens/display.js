@@ -1,10 +1,10 @@
-// Режим Display (iPad): великий автомасштабований live-текст, історія, QR-модал.
-// Тема/розмір/банер делеговано в settings, автомасштаб — у fit-text.
+// Режим Display (iPad): великий live-текст у чотирьох режимах показу, історія, QR-модал.
+// Тема/розмір/режим/банер делеговано в settings, показ тексту — у live-view.
 import {
   ORIENTATION_DELAY_MS, MSG_TYPE_COMMIT, MSG_TYPE_SETTINGS, MSG_TYPE_CLEAR,
   TEXT_PLACEHOLDER, ROLE_DISPLAY, MODE_TELE, MODE_MARQUEE
 } from "../config.js";
-import { $, show, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal, closeQrModal, bindOutsideClose, createHistory } from "../utils/utils.js";
+import { $, show, getHashParam, resolveRoom, makeToken, saveRoom, resolveKey, saveKey, initQrModal, openQrModal, closeQrModal, bindOutsideClose, createHistory } from "../utils/utils.js";
 import { connect, decode } from "../utils/mqtt-client.js";
 import { makeKeyB64, initKey, decrypt } from "../utils/crypto.js";
 import { createLiveView } from "../components/live-view.js";
@@ -28,7 +28,8 @@ export function init() {
   saveKey(key);
   initKey(key, "decrypt");
 
-  if (location.hash.indexOf("room=") === -1) {
+  // Фрагмент відсутній або містить некоректні значення → записати актуальні.
+  if (getHashParam("room") !== room || getHashParam("k") !== key) {
     location.hash = "room=" + room + "&k=" + key;
   }
 

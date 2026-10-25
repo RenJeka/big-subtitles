@@ -1,5 +1,5 @@
 // Дрібні хелпери: DOM, генерація токена, парсинг URL, кімната, статус, QR-модал, доступність.
-import { LS_ROOM, LS_KEY, TOKEN_ALPHABET, TOKEN_LENGTH, QR_SIZE, QR_CORRECT_LEVEL, TEXT_QR_UNAVAILABLE, HISTORY_LIMIT } from "../config.js";
+import { LS_ROOM, LS_KEY, ROOM_PATTERN, KEY_PATTERN, TOKEN_ALPHABET, TOKEN_LENGTH, QR_SIZE, QR_CORRECT_LEVEL, TEXT_QR_UNAVAILABLE, HISTORY_LIMIT } from "../config.js";
 import * as store from "./store.js";
 
 /**
@@ -29,7 +29,7 @@ export function prefersReducedMotion() {
   return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
 
-// Випадковий токен кімнати (base62, довжина TOKEN_LENGTH — єдиний «секрет» парування).
+// Випадковий токен кімнати (base62, довжина TOKEN_LENGTH).
 export function makeToken() {
   const bytes = new Uint8Array(TOKEN_LENGTH);
   crypto.getRandomValues(bytes);
@@ -56,11 +56,17 @@ export function getQueryParam(name) {
   return null;
 }
 
+// Перше значення, що відповідає pattern; некоректні (пошкоджене посилання) пропускаються.
+function firstValid(pattern, values) {
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] && pattern.test(values[i])) return values[i];
+  }
+  return null;
+}
+
 // Кімната: спершу з #room=, інакше з localStorage.
 export function resolveRoom() {
-  let room = getHashParam("room");
-  if (!room) room = store.get(LS_ROOM, null);
-  return room || null;
+  return firstValid(ROOM_PATTERN, [getHashParam("room"), store.get(LS_ROOM, null)]);
 }
 
 export function saveRoom(room) {
@@ -69,9 +75,7 @@ export function saveRoom(room) {
 
 // E2E-ключ (base64url): спершу з #…&k=, інакше з localStorage. Парний до кімнати.
 export function resolveKey() {
-  let key = getHashParam("k");
-  if (!key) key = store.get(LS_KEY, null);
-  return key || null;
+  return firstValid(KEY_PATTERN, [getHashParam("k"), store.get(LS_KEY, null)]);
 }
 
 export function saveKey(key) {

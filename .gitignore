@@ -4,21 +4,6 @@
 # Скриншоти прев'ю
 display-*.png
 
-# Тестові артефакти Playwright
-.playwright-mcp/
-
-# Скриншоти прев'ю
-display-*.png
-# Тестові артефакти Playwright
-.playwright-mcp/
-
-# Скриншоти прев'ю
-display-*.png
-# Тестові артефакти Playwright
-.playwright-mcp/
-
-# Скриншоти прев'ю
-display-*.png
-
+# Логи
 .logs/
 *.log
